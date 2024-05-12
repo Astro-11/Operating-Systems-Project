@@ -7,8 +7,18 @@
 #include <form.h>
 #include <stdio.h>
 
+
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+
 #define MENU_CHOICES 5
 #define MAX_FIELD_LEN 30
+#define BUFFER_SIZE 256
+
 
 int displayFormWindow();
 
@@ -21,7 +31,7 @@ int main() {
     int i;
 
     char *choices[MENU_CHOICES] = {
-        "Search entries",
+        "Ask the server",
         "Add new entry",
         "Log in",
         "Info",
@@ -111,6 +121,46 @@ int main() {
                         /* Change log in to log out and toggle Add new entry */
                         move(LINES - 4, 0);
                         clrtoeol();
+                        refresh();
+                    } else if (strcmp(selected_choice, "Ask the server") == 0){
+                        move(LINES - 4, 3);
+                        clrtoeol();
+                        printw("Waiting for the server response...");
+                        refresh();
+
+                        int client_socket = socket(AF_INET, SOCK_STREAM, 0);
+
+                        struct sockaddr_in server_address;
+                        server_address.sin_family = AF_INET;
+                        server_address.sin_port = htons(9002);
+                        server_address.sin_addr.s_addr = INADDR_ANY;
+                        int check = connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address));
+
+                        char server_response[BUFFER_SIZE];
+                        //recv(client_socket, &server_response, sizeof(server_response), 0);
+
+                        int valread = recv(client_socket, server_response, BUFFER_SIZE - 1, 0);
+                        if (valread == -1) {
+                            perror("Receive error");
+                        }
+
+                        server_response[valread] = '\0'; // Null-terminate the received data
+                            
+                
+
+                        close(client_socket);
+
+                        FILE *fp = fopen("serverResponses.txt", "a");
+                        if (fp != NULL) {
+                            fprintf(fp, "TUI          : %s\n", server_response);
+                            fprintf(fp, "----------------\n");
+                            fclose(fp);
+                        }
+
+                        move(LINES - 4, 3);
+                        clrtoeol();
+                        // clrtobot()
+                        printw("The server said: %s", server_response);
                         refresh();
                     }
                     else if (strcmp(selected_choice, "Add new entry") == 0) {
