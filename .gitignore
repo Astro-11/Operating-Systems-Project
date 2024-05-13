@@ -7,3 +7,5 @@ serverResponses.txt
 DatabaseHandler
 Database
 a.out
+socketClientTest
+socketServerTest
