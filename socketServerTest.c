@@ -12,12 +12,25 @@ int getMsgLenght() {
     return 256;
 }
 
+int getDataEntryLenght() {
+    int size = sizeof(dataEntry);
+    return size;
+}
+
 int receiveMsg(int socket, char * buffer) {
-    return recv(socket, &buffer, sizeof(buffer), 0);
+    return recv(socket, buffer, getMsgLenght(), 0);
 }
 
 int sendMsg(int socket, char * buffer) {
-    return send(socket, &buffer, sizeof(buffer), 0);
+    return send(socket, buffer, getMsgLenght(), 0);
+}
+
+int receiveDataEntry(int socket, char * buffer) {
+    return recv(socket, buffer, getDataEntryLenght(), 0);
+}
+
+int sendDataEntry(int socket, char * buffer) {
+    return send(socket, buffer, getDataEntryLenght(), 0);
 }
 
 int main(){
@@ -48,10 +61,10 @@ int main(){
         {
             printf("Connection enstablished, awaiting user credentials. \n");
             char user[msgLenght];
-            recv(client_socket, &user, sizeof(user), 0);
+            receiveMsg(client_socket, user);
             printf("Received user: %s", user);
             char password[msgLenght];
-            recv(client_socket, &password, sizeof(password), 0);
+            receiveMsg(client_socket, password);
             printf("Received password: %s", password);
 
             int sameUser = strcmp(user, tempUser);
@@ -61,11 +74,13 @@ int main(){
 
             if(sameUser == 0 && samePassword == 0) {
                 printf("User authenticated succesfully\n");
+
                 //Write a single entry
                 FILE *myFilePtr;
                 myFilePtr = fopen("Database.txt", "w+");
                 dataEntry newEntry = {"Simon", "Israele", "666"};
                 writeEntry(newEntry, myFilePtr);
+
                 //Read and print all the entries (for now only one)
                 int entriesCount = countEntries(myFilePtr, sizeof(dataEntry));
                 dataEntry dataEntries[entriesCount];
