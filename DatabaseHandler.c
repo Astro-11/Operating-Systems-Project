@@ -29,9 +29,9 @@ dataEntry readEntry(FILE *filePointer) {
     while(1) {
         readChars = fread(&readEntry, sizeof(readEntry), 1, filePointer);
         if (readChars <= 0) break;
-        printf("Nome: %s, Indirizzo: %s, Numero: %s \n", readEntry.name, readEntry.address, readEntry.phoneNumber);
+        /*printf("Nome: %s, Indirizzo: %s, Numero: %s \n", readEntry.name, readEntry.address, readEntry.phoneNumber);
         printf("File is in position %ld \n", ftell(filePointer));
-        printf("Read chars: %d \n", readChars);
+        printf("Read chars: %d \n", readChars);*/
     } 
 }
 
@@ -85,7 +85,7 @@ void readEntireFile(FILE *filePointer) {
     } while (readChars <= 0);
 }
 
-int main(int argc, char const *argv[])
+/*int main(int argc, char const *argv[])
 {
     FILE *myFilePtr;
     myFilePtr = fopen("Database.txt", "w+");
@@ -108,4 +108,4 @@ int main(int argc, char const *argv[])
     }
 
     return 0;
-}
+}*/
