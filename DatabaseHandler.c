@@ -4,9 +4,9 @@
 #define ERROR "An error has occured"
 
 typedef struct {
-    char * name;
-    char * address;
-    char * phoneNumber;
+    char name[256];
+    char address[256];
+    char phoneNumber[256];
 } dataEntry;
 
 void closeFile(FILE *filePointer) {

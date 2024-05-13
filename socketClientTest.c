@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "SocketUtilities.h"
 
 int main(){
 
@@ -20,12 +21,31 @@ int main(){
     server_address.sin_addr.s_addr = INADDR_ANY;
     int check = connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address));
 
+    //Authentication mock
     printf("Insert your username: ");
     fgets(user, sizeof(user), stdin);
-    send(client_socket, user, sizeof(user), 0);
+    sendMsg(client_socket, user);
     printf("Insert your password: ");
     fgets(password, sizeof(password), stdin);
-    send(client_socket, password, sizeof(password), 0);
+    sendMsg(client_socket, password);
+    //TODO: add authentication failed signal reception
+
+    //Receive and parse the number of entries saved in the db
+    char entriesCountMsg[msgLenght];
+    receiveMsg(client_socket, entriesCountMsg);
+    int entriesCount;
+    sscanf(entriesCountMsg, "%d", &entriesCount);
+    printf("There are %d entries:\n", entriesCount);
+
+    //Receive as many entries as present
+    int i = 0;
+    while (i < entriesCount) {
+        dataEntry receivedDataEntry;
+        int received = receiveDataEntry(client_socket, &receivedDataEntry);
+        printf("Received %d bytes - ", received);
+         printf("Nome: %s, Indirizzo: %s, Numero: %s \n", receivedDataEntry.name, receivedDataEntry.address, receivedDataEntry.phoneNumber);
+        i++;
+    }
 
     close(client_socket);
     

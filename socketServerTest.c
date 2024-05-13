@@ -5,33 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "DatabaseHandler.h"
-
-//Useful for future abstraction into send() / receive() header file
-int getMsgLenght() {
-    return 256;
-}
-
-int getDataEntryLenght() {
-    int size = sizeof(dataEntry);
-    return size;
-}
-
-int receiveMsg(int socket, char * buffer) {
-    return recv(socket, buffer, getMsgLenght(), 0);
-}
-
-int sendMsg(int socket, char * buffer) {
-    return send(socket, buffer, getMsgLenght(), 0);
-}
-
-int receiveDataEntry(int socket, char * buffer) {
-    return recv(socket, buffer, getDataEntryLenght(), 0);
-}
-
-int sendDataEntry(int socket, char * buffer) {
-    return send(socket, buffer, getDataEntryLenght(), 0);
-}
+#include "SocketUtilities.h"
 
 int main(){
 
@@ -75,23 +49,33 @@ int main(){
             if(sameUser == 0 && samePassword == 0) {
                 printf("User authenticated succesfully\n");
 
-                //Write a single entry
+                //Write two entries to mock database
                 FILE *myFilePtr;
                 myFilePtr = fopen("Database.txt", "w+");
-                dataEntry newEntry = {"Simon", "Israele", "666"};
-                writeEntry(newEntry, myFilePtr);
+                dataEntry newDataEntry1 = { "Andrea" , "Via Tesla", "111"};
+                dataEntry newDataEntry2 = { "Simone" , "Israele", "666"};
+                writeEntry(newDataEntry1, myFilePtr);
+                writeEntry(newDataEntry2, myFilePtr);
 
-                //Read and print all the entries (for now only one)
+                //Count number of entries and send count to Client
                 int entriesCount = countEntries(myFilePtr, sizeof(dataEntry));
+                char entriesCountMsg[256];
+                sprintf(entriesCountMsg, "%d", entriesCount);
+                sendMsg(client_socket, entriesCountMsg);
+
+                //Read entries
                 dataEntry dataEntries[entriesCount];
                 if (entriesCount != readEntries(myFilePtr, dataEntries)) printf("An error has occured while reading entries from file");
 
+                //Send as many entries as present in the db
                 int i = 0;
                 while (i < entriesCount) {
-                    printf("Nome: %s, Indirizzo: %s, Numero: %s \n", dataEntries[i].name, dataEntries[i].address, dataEntries[i].phoneNumber);
+                    int sent = sendDataEntry(client_socket, &dataEntries[i]);
+                    printf("Sent %d bytes\n", sent);
                     i++;
                 }
             }
+            //TODO: send authentication failed signal to Client
             else printf("User failed authentication\n");
 
             printf("Closing connection.\n\n");
