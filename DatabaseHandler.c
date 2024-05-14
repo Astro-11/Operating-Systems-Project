@@ -1,13 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include "DatabaseHandler.h"
 
 #define ERROR "An error has occured"
-
-typedef struct {
-    char name[256];
-    char address[256];
-    char phoneNumber[256];
-} dataEntry;
 
 void closeFile(FILE *filePointer) {
     int errorCode;
