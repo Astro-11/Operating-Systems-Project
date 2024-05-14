@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include "SocketUtilities.h"
 
 #define MENU_CHOICES 5
 #define MAX_FIELD_LEN 30
@@ -132,7 +133,7 @@ int main() {
 
                         struct sockaddr_in server_address;
                         server_address.sin_family = AF_INET;
-                        server_address.sin_port = htons(9002);
+                        server_address.sin_port = htons(PORT);
                         server_address.sin_addr.s_addr = INADDR_ANY;
                         int check = connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address));
 

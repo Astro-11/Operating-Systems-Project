@@ -1,9 +1,9 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+
 #include "SocketUtilities.h"
 
 int main(){
@@ -13,14 +13,15 @@ int main(){
     char user[msgLenght];
     char password[msgLenght];
 
-    int client_socket = socket(AF_INET, SOCK_STREAM, 0);
+    // int client_socket = socket(AF_INET, SOCK_STREAM, 0);
 
-    struct sockaddr_in server_address;
-    server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(9002);
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    int check = connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address));
+    // struct sockaddr_in server_address;
+    // server_address.sin_family = AF_INET;
+    // server_address.sin_port = htons(PORT);
+    // server_address.sin_addr.s_addr = INADDR_LOOPBACK;
+    // int check = connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address));
 
+    int client_socket =
     //Authentication mock
     printf("Insert your username: ");
     fgets(user, sizeof(user), stdin);
@@ -43,7 +44,11 @@ int main(){
         dataEntry receivedDataEntry;
         int received = receiveDataEntry(client_socket, &receivedDataEntry);
         printf("Received %d bytes - ", received);
-         printf("Nome: %s, Indirizzo: %s, Numero: %s \n", receivedDataEntry.name, receivedDataEntry.address, receivedDataEntry.phoneNumber);
+         printf("Nome: %s, Indirizzo: %s, Numero: %s \n", 
+                receivedDataEntry.name, 
+                receivedDataEntry.address, 
+                receivedDataEntry.phoneNumber);
+        
         i++;
     }
 

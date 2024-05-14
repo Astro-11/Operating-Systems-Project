@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+
 #include "SocketUtilities.h"
 
 int main(){
@@ -15,21 +16,15 @@ int main(){
     char * tempPassword = "Password\n";
 
     // creo il sokcet
-    int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    int server_socket = create_server_socket(PORT);
 
-    //Setsockopt
-    //Faccio il setup del socket appena creato
-    struct sockaddr_in server_address;
-    server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(9002);
-    server_address.sin_addr.s_addr = INADDR_ANY; //INADDR_LOOPBACK
-    
-    int check = bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address));
     printf("Ctrl+C to terminate the server.\n\n");
-    printf("Server is online listening for connection...\n");
+    
 
     while(1){
+        printf("Server is online listening for connection...\n");
         listen(server_socket, 1);
+
         int client_socket = accept(server_socket, NULL, NULL);
         if (fork() == 0)
         {
