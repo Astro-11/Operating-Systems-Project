@@ -6,5 +6,5 @@ Siti utili per ncurses:
 
 Per compilare:
 ```
-gcc -o sticazzi tuiProrotype.c -lform -lmenu -lncurses; ./sticazzi
+gcc -o sticazzi tuiPrototype.c -lform -lmenu -lncurses; ./sticazzi
 ```

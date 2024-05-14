@@ -125,7 +125,7 @@ int main() {
                     } else if (strcmp(selected_choice, "Ask the server") == 0){
                         move(LINES - 4, 3);
                         clrtoeol();
-                        printw("Waiting for the server response...");
+                        printw("Waiting for the server response... ");
                         refresh();
 
                         int client_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -141,27 +141,35 @@ int main() {
 
                         int valread = recv(client_socket, server_response, BUFFER_SIZE - 1, 0);
                         if (valread == -1) {
-                            perror("Receive error");
-                        }
+                            // perror("Receive error");
+                            init_pair(4, COLOR_RED, COLOR_BLACK);
+                            attron(COLOR_PAIR(4));
+                            printw("IMPOSSIBLE TO REACH THE SERVER");
+                            attroff( COLOR_PAIR(4));
+                        } else {
+                            server_response[valread] = '\0'; // Null-terminate the received data
 
-                        server_response[valread] = '\0'; // Null-terminate the received data
                             
-                
 
-                        close(client_socket);
+                            FILE *fp = fopen("serverResponses.txt", "a");
+                            if (fp != NULL) {
+                                fprintf(fp, "TUI          : %s\n", server_response);
+                                fprintf(fp, "----------------\n");
+                                fclose(fp);
+                            }
 
-                        FILE *fp = fopen("serverResponses.txt", "a");
-                        if (fp != NULL) {
-                            fprintf(fp, "TUI          : %s\n", server_response);
-                            fprintf(fp, "----------------\n");
-                            fclose(fp);
+                            move(LINES - 4, 3);
+                            clrtoeol();
+                            init_pair(3, COLOR_BLUE, COLOR_BLACK);
+                            
+                            printw("The server said: ");
+                            attron(COLOR_PAIR(3));
+                            printw("%s", server_response);
+                            attroff( COLOR_PAIR(3));
+                            refresh();
                         }
-
-                        move(LINES - 4, 3);
-                        clrtoeol();
-                        // clrtobot()
-                        printw("The server said: %s", server_response);
-                        refresh();
+                        close(client_socket);
+                        
                     }
                     else if (strcmp(selected_choice, "Add new entry") == 0) {
                         // Open the form window
