@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -15,7 +14,6 @@ int main(){
     char * tempUser = "User\n";
     char * tempPassword = "Password\n";
 
-    // creo il sokcet
     int server_socket = create_server_socket(PORT);
 
     printf("Ctrl+C to terminate the server.\n\n");
@@ -25,7 +23,8 @@ int main(){
         printf("Server is online listening for connection...\n");
         listen(server_socket, 1);
 
-        int client_socket = accept(server_socket, NULL, NULL);
+        int client_socket = accept_client_connection(server_socket);
+
         if (fork() == 0)
         {
             printf("Connection enstablished, awaiting user credentials. \n");

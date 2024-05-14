@@ -21,7 +21,8 @@ int main(){
     // server_address.sin_addr.s_addr = INADDR_LOOPBACK;
     // int check = connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address));
 
-    int client_socket =
+    int client_socket = create_client_socket(SERVER_IP, PORT);
+    
     //Authentication mock
     printf("Insert your username: ");
     fgets(user, sizeof(user), stdin);

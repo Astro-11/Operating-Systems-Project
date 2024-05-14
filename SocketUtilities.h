@@ -21,6 +21,6 @@ int create_server_socket(int port);
 int create_client_socket(const char *server_ip, int port);
 int accept_client_connection(int server_socket);
 void handle_error(const char *msg);
-//login
+int login(char* user, char* password);
 
 #endif // SOCKET_UTILS_H

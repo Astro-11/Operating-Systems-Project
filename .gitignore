@@ -9,5 +9,4 @@ Database
 a.out
 socketClientTest
 socketServerTest
-socketServerTest.o
-DatabaseHandler.o
+*.o

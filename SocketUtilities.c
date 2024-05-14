@@ -52,7 +52,7 @@ int create_server_socket(int port) {
     memset(&server_address, 0, sizeof(server_address)); // helps to avoid weird bugs with uninitialized memory
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(port);
-    server_address.sin_addr.s_addr = INADDR_LOOPBACK; //INADDR_ANY
+    server_address.sin_addr.s_addr = INADDR_ANY; //INADDR_ANY
 
     
     if (bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) {
@@ -79,6 +79,10 @@ int create_client_socket(const char *server_ip, int port) {
         handle_error("invalid address or address not supported");
     }
 
+    if (connect(client_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) {
+        handle_error("connection failed");
+    }
+
     return client_socket;
 }
 
@@ -92,5 +96,11 @@ int accept_client_connection(int server_socket) {
     }
 
     return client_socket;
+}
+
+int login(char* user, char* password){
+    // sendMsg(client_socket, user);
+    // sendMsg(client_socket, password);
+    return 1;
 }
 
