@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -7,12 +8,21 @@
 
 #include "SocketUtilities.h"
 
+char* rtrim(char *str) {
+    int len = strlen(str);
+    while (len > 0 && isspace((unsigned char)str[len - 1])) {
+        len--;
+    }
+    str[len] = '\0';
+    return str;
+}
+
 int main(){
 
     int msgLenght = getMsgLenght();
 
-    char * tempUser = "User\n";
-    char * tempPassword = "Password\n";
+    char * tempUser = "User";
+    char * tempPassword = "Password";
 
     int server_socket = create_server_socket(PORT);
 
@@ -35,8 +45,9 @@ int main(){
             receiveMsg(client_socket, password);
             printf("Received password: %s", password);
 
-            int sameUser = strcmp(user, tempUser);
-            int samePassword = strcmp(password, tempPassword);
+            
+            int sameUser = strcmp(rtrim(user), tempUser);
+            int samePassword = strcmp(rtrim(password), tempPassword);
             //printf("User: %s, Expected User: %s, Password: %s, Expected Password: %s\n", user, tempUser, password, tempPassword);
             //printf("Is same user: %d, has same password: %d", sameUser, samePassword);
 

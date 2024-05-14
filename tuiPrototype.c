@@ -22,6 +22,7 @@
 
 
 int submitFormWindow();
+int loginFormWindow();
 
 int main() {
 
@@ -119,7 +120,23 @@ int main() {
                         system("clear");
                         return 0;
                     } else if (strcmp(selected_choice, "Log in") == 0){
-                        /* Change log in to log out and toggle Add new entry */
+                        // Open the form window
+                        clear();
+                        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
+                        refresh();
+                        unpost_menu(my_menu);
+
+                        if (loginFormWindow() == 1) {
+                            // Successful log in, return to main menu
+                             // Clear screen before redrawing menu
+                            clear();
+                            refresh();  
+                        } else {
+                            // Insertion cancelled or failed, exit program
+                            system("stty sane");
+                            system("clear");
+                            return 1;
+                        }
                         move(LINES - 4, 0);
                         clrtoeol();
                         refresh();
@@ -440,8 +457,12 @@ int loginFormWindow() {
                 char *pass = field_buffer(fields[1], 0);
 
                 int client_socket = create_client_socket(SERVER_IP, PORT);
+                login(client_socket, name, pass);
                 
-                
+                if(0){
+                    // TODO: Failed to login print red stuff
+                }
+
                 curs_set(0);
 
                 unpost_form(my_form);

@@ -98,9 +98,9 @@ int accept_client_connection(int server_socket) {
     return client_socket;
 }
 
-int login(char* user, char* password){
-    // sendMsg(client_socket, user);
-    // sendMsg(client_socket, password);
-    return 1;
+void login(int client_socket,char* user, char* password){
+    
+    sendMsg(client_socket, user);
+    sendMsg(client_socket, password);
 }
 
