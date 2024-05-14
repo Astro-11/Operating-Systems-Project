@@ -8,7 +8,7 @@
 
 int main(){
 
-    int msgLenght = 256;
+    int msgLenght = getMsgLenght();
 
     char user[msgLenght];
     char password[msgLenght];
