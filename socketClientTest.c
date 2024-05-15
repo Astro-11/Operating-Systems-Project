@@ -28,12 +28,16 @@ int main(){
     switch (choice)
     {
     //TODO ADD SEARCH RECORD & REMOVE RECORD
-
-    case 2: {
+    case 1:
+        printf("Unimplemented, try #2\n");
+        break;
+    case 2:
         send_signal(clientSocket, choiceStr);
         add_new_record(clientSocket);
-    }
-    
+        break;
+    case 3:
+        printf("Unimplemented, try #2\n");
+        break;
     default:
         printf("Invalid option selected, try again: \n");
         goto choice_loop;

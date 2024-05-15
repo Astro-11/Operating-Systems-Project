@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include "DatabaseHandler.h"
 #include "SocketUtilities.h"
 
 #define MENU_CHOICES 5
@@ -250,7 +251,9 @@ int main() {
 int submitFormWindow() {
 
     curs_set(1);
-
+    int clientSocket = create_client_socket(SERVER_IP, PORT);
+    char requestSearch = '1';
+    send_signal(clientSocket, &requestSearch);
     // Create a new window for the form
 
     // Calculate window dimensions and positions
@@ -263,9 +266,9 @@ int submitFormWindow() {
     box(form_win, 0, 0);
     char header[] = "Please enter your information:";
     mvwprintw(form_win, 1, (width - strlen(header)) / 2, "%s","Please enter your information:");
-    mvwprintw(form_win, 3, 1, "%8s","Name: ");
-    mvwprintw(form_win, 4, 1, "%8s","Phone: ");
-    mvwprintw(form_win, 5, 1, "%8s","Email: ");
+    mvwprintw(form_win, 3, 1, "%8s","Name____: ");
+    mvwprintw(form_win, 4, 1, "%8s","Address_: ");
+    mvwprintw(form_win, 5, 1, "%8s","Phone___: ");
 
     // Create form fields
     FIELD *fields[4];
@@ -327,26 +330,38 @@ int submitFormWindow() {
                 char *phone = field_buffer(fields[1], 0);
                 char *email = field_buffer(fields[2], 0);
 
-                // Save input to file
-                FILE *fp = fopen("userinfo.txt", "a");
-                if (fp != NULL) {
-                    fprintf(fp, "Name : %s\n", name);
-                    fprintf(fp, "Phone: %s\n", phone);
-                    fprintf(fp, "Email: %s\n", email);
-                    fprintf(fp, "----------------\n");
-                    fclose(fp);
-                    
-                    init_pair(2, COLOR_GREEN, COLOR_BLACK);
-                    wattron(form_win, COLOR_PAIR(2));
-                    char footer[] = "Data saved to 'userinfo.txt'";
-                    mvwprintw(form_win, getmaxy(form_win)-2, (getmaxx(form_win) - strlen(footer)) / 2, "%s", footer);
-                    wattroff(form_win, COLOR_PAIR(2));
+                dataEntry submit;
+                strncpy(submit.name, rtrim(field_buffer(fields[0], 0)), sizeof(submit.name) - 1);
+                strncpy(submit.address,rtrim(field_buffer(fields[1], 0)), sizeof(submit.address) - 1);
+                strncpy(submit.phoneNumber,rtrim(field_buffer(fields[2], 0)), sizeof(submit.phoneNumber) - 1);
 
-                    wrefresh(form_win);
+                sendDataEntry(clientSocket, &submit);
+
+
+                init_pair(2, COLOR_GREEN, COLOR_BLACK);
+                wattron(form_win, COLOR_PAIR(2));
+                char footer[] = "Query results saved to file'";
+                mvwprintw(form_win, getmaxy(form_win)-2, (getmaxx(form_win) - strlen(footer)) / 2, "%s", footer);
+                wattroff(form_win, COLOR_PAIR(2));
+                // // Save input to file
+                // FILE *fp = fopen("userinfo.txt", "a");
+                // if (fp != NULL) {
+                //     fprintf(fp, "Name : %s\n", name);
+                //     fprintf(fp, "Phone: %s\n", phone);
+                //     fprintf(fp, "Email: %s\n", email);
+                //     fprintf(fp, "----------------\n");
+                //     fclose(fp);
                     
-                    curs_set(0);
-                    getch(); // Wait for user input to exit
-                }
+                //     init_pair(2, COLOR_GREEN, COLOR_BLACK);
+                //     wattron(form_win, COLOR_PAIR(2));
+                //     char footer[] = "Data saved to 'userinfo.txt'";
+                //     mvwprintw(form_win, getmaxy(form_win)-2, (getmaxx(form_win) - strlen(footer)) / 2, "%s", footer);
+                //     wattroff(form_win, COLOR_PAIR(2));
+
+                //     wrefresh(form_win);
+                    
+                //     getch(); // Wait for user input to exit
+                // }
 
                 // Clean up the form and window
                 curs_set(0);

@@ -4,7 +4,7 @@
 #include "DatabaseHandler.h"
 
 #define SERVER_IP "127.0.0.1"
-#define PORT 9090
+#define PORT 9890
 #define SIGNAL_LENGTH 4
 #define MSG_LENGHT 256
 

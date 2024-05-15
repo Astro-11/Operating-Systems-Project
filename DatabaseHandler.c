@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include "DatabaseHandler.h"
@@ -94,6 +95,15 @@ void readEntireFile(FILE *filePointer) {
         readChars = fread(buffer, sizeof(buffer), 1, filePointer);
         printf("%s\n", buffer);
     } while (readChars <= 0);
+}
+
+char* rtrim(char *str) {
+    int len = strlen(str);
+    while (len > 0 && isspace((unsigned char)str[len - 1])) {
+        len--;
+    }
+    str[len] = '\0';
+    return str;
 }
 
 /*int main(int argc, char const *argv[])

@@ -25,4 +25,6 @@ int countEntries(FILE *filePointer, int sizeOfEntry);
 
 int readEntries(FILE *filePointer, dataEntry dataEntries[]);
 
+char* rtrim(char *str);
+
 #endif // DATABASE_HANDLER_H

@@ -1,4 +1,3 @@
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -6,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include "DatabaseHandler.h"
 #include "SocketUtilities.h"
 
 #define DEBUG 1
@@ -14,27 +14,24 @@ void add_new_record(int clientSocket);
 void print_all_entries();
 void send_entries(int clientSocket);
 
-char* rtrim(char *str) {
-    int len = strlen(str);
-    while (len > 0 && isspace((unsigned char)str[len - 1])) {
-        len--;
-    }
-    str[len] = '\0';
-    return str;
-}
+
 
 int matches(dataEntry entry, dataEntry filter) {
     if (strlen(filter.name) > 0 && strstr(entry.name, filter.name) == NULL) {
+        printf("name mismatch\n");
         return 0;
     }
     if (strlen(filter.address) > 0 && strstr(entry.address, filter.address) == NULL) {
+        printf("addr mismatch\n");
         return 0;
     }
     if (strlen(filter.phoneNumber) > 0 && strstr(entry.phoneNumber, filter.phoneNumber) == NULL) {
+        printf("phone\n");
         return 0;
     }
     return 1;
 }
+
 
 
 
@@ -78,7 +75,7 @@ dataEntry database[30] = {
 
     while(1){
         printf("Server is online listening for connection...\n");
-        listen(server_socket, 1);
+        listen(server_socket, 10);
         int client_socket = accept_client_connection(server_socket);
 
         if (fork() == 0)
@@ -90,10 +87,44 @@ dataEntry database[30] = {
 
             switch (choice)
             {
-            case 1:
-                printf("%d - Search record\n\n", choice);
+            case 1:{
+                printf("%d - Search database\n\n", choice);
+                dataEntry query;
+                receiveDataEntry(client_socket, &query);
+                printf("Received query\n");
+                printf("Received record: \n\n\tName: %s\n\tAddress: %s\n\tPhone: %s\n\n", 
+                                query.name, 
+                                query.address, 
+                                query.phoneNumber);
+                const char *fileName = "filteredEntryees.anActualReadableTxtFileAndNotRandomBytes";
+                FILE *fp = fopen(fileName, "w");
+                printf("beep!\n");
+                if (fp == NULL) {
+                    printf("error!\n");
+                    perror("Error opening file");
+                    return 1; // Return an error code
+                }
+
+                // int DBsize = sizeof(database);
+                // dataEntry queryResult[DBsize];
+                int count = 0;
+                printf("beep!\n");
+                for(int i = 0; i < 30; i++){
+                    if(matches(database[i], query)){
+                        // queryResult[count++] = database[i];
+                        fprintf(fp, "Name____: %s\n", database[i].name);
+                        fprintf(fp, "Address_: %s\n", database[i].address);
+                        fprintf(fp, "Phone___: %s\n", database[i].phoneNumber);
+                        fprintf(fp, "----------------\n");
+                        printf("beep!\n");
+                        } else {
+                            printf("nope!\n");
+                        }
+                    }
+                fclose(fp);
+                }
+                printf("Search results saved locally in file.\n\n");
                 break;
-            
             case 2:
                 printf("%d - Add new record\n\n", choice);
                 add_new_record(client_socket);
