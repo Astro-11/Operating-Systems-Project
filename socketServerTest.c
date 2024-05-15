@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -13,10 +14,16 @@ void add_new_record(int clientSocket);
 void print_all_entries();
 void send_entries(int clientSocket);
 
-int main(){
+char* rtrim(char *str) {
+    int len = strlen(str);
+    while (len > 0 && isspace((unsigned char)str[len - 1])) {
+        len--;
+    }
+    str[len] = '\0';
+    return str;
+}
 
-    char * tempUser = "User\n";
-    char * tempPassword = "Password\n";
+int main(){
 
     int server_socket = create_server_socket(PORT);
 
