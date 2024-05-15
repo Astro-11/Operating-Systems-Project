@@ -11,6 +11,8 @@ typedef struct {
     char phoneNumber[256];
 } dataEntry;
 
+void debug_populate_db();
+
 FILE * open_db_read();
 
 FILE * open_db_write();
