@@ -3,38 +3,71 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <string.h>
 
 #include "SocketUtilities.h"
 
+void add_new_record(int clientSocket);
+void receive_entries(int clientSocket);
+
 int main(){
 
-    int msgLenght = getMsgLenght();
+    int clientSocket = create_client_socket(SERVER_IP, PORT);
 
-    char user[msgLenght];
-    char password[msgLenght];
+    choice_loop:
+    printf("Select an option:\n"
+            "1 - Search record\n"
+            "2 - Add new record\n"
+            "3 - Remove record\n");
 
-    // int client_socket = socket(AF_INET, SOCK_STREAM, 0);
+    char choiceStr[SIGNAL_LENGTH];
+    fgets(choiceStr, SIGNAL_LENGTH, stdin);
+    int choice;
+    sscanf(choiceStr, "%d", &choice);
 
-    // struct sockaddr_in server_address;
-    // server_address.sin_family = AF_INET;
-    // server_address.sin_port = htons(PORT);
-    // server_address.sin_addr.s_addr = INADDR_LOOPBACK;
-    // int check = connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address));
+    switch (choice)
+    {
+    //TODO ADD SEARCH RECORD & REMOVE RECORD
 
-    int client_socket = create_client_socket(SERVER_IP, PORT);
+    case 2: {
+        send_signal(clientSocket, choiceStr);
+        add_new_record(clientSocket);
+    }
     
-    //Authentication mock
-    printf("Insert your username: ");
-    fgets(user, sizeof(user), stdin);
-    sendMsg(client_socket, user);
-    printf("Insert your password: ");
-    fgets(password, sizeof(password), stdin);
-    sendMsg(client_socket, password);
-    //TODO: add authentication failed signal reception
+    default:
+        printf("Invalid option selected, try again: \n");
+        goto choice_loop;
+    }
+
+    close(clientSocket);
+    
+    return 0;
+}
+
+void add_new_record(int clientSocket) {
+    char name[MSG_LENGHT];
+    char address[MSG_LENGHT];
+    char phoneNumber[MSG_LENGHT];
+
+    printf("Name: ");
+    fgets(name, MSG_LENGHT, stdin);
+    printf("Address: ");
+    fgets(address, MSG_LENGHT, stdin);
+    printf("Number: ");
+    fgets(phoneNumber, MSG_LENGHT, stdin);
+
+    dataEntry newDataEntry;
+    strcpy(newDataEntry.name, name);
+    strcpy(newDataEntry.address, address);
+    strcpy(newDataEntry.phoneNumber, phoneNumber);
+    sendDataEntry(clientSocket, &newDataEntry);
+}
+
+void receive_entries(int clientSocket) {
 
     //Receive and parse the number of entries saved in the db
-    char entriesCountMsg[msgLenght];
-    receiveMsg(client_socket, entriesCountMsg);
+    char entriesCountMsg[MSG_LENGHT];
+    receiveMsg(clientSocket, entriesCountMsg);
     int entriesCount;
     sscanf(entriesCountMsg, "%d", &entriesCount);
     printf("There are %d entries:\n", entriesCount);
@@ -43,17 +76,13 @@ int main(){
     int i = 0;
     while (i < entriesCount) {
         dataEntry receivedDataEntry;
-        int received = receiveDataEntry(client_socket, &receivedDataEntry);
+        int received = receiveDataEntry(clientSocket, &receivedDataEntry);
         printf("Received %d bytes - ", received);
-         printf("Nome: %s, Indirizzo: %s, Numero: %s \n", 
+        printf("Nome: %s, Indirizzo: %s, Numero: %s \n", 
                 receivedDataEntry.name, 
                 receivedDataEntry.address, 
                 receivedDataEntry.phoneNumber);
         
         i++;
     }
-
-    close(client_socket);
-    
-    return 0;
 }

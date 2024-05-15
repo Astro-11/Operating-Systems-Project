@@ -7,9 +7,13 @@
 
 #include "SocketUtilities.h"
 
-int main(){
+#define DEBUG 1
 
-    int msgLenght = getMsgLenght();
+void add_new_record(int clientSocket);
+void print_all_entries();
+void send_entries(int clientSocket);
+
+int main(){
 
     char * tempUser = "User\n";
     char * tempPassword = "Password\n";
@@ -17,60 +21,38 @@ int main(){
     int server_socket = create_server_socket(PORT);
 
     printf("Ctrl+C to terminate the server.\n\n");
-    
 
     while(1){
         printf("Server is online listening for connection...\n");
         listen(server_socket, 1);
-
         int client_socket = accept_client_connection(server_socket);
 
         if (fork() == 0)
         {
-            printf("Connection enstablished, awaiting user credentials. \n");
-            char user[msgLenght];
-            receiveMsg(client_socket, user);
-            printf("Received user: %s", user);
-            char password[msgLenght];
-            receiveMsg(client_socket, password);
-            printf("Received password: %s", password);
+            printf("Connection enstablished, awaiting user request. \n\n");
+            
+            int choice;
+            receive_signal(client_socket, &choice);
 
-            int sameUser = strcmp(user, tempUser);
-            int samePassword = strcmp(password, tempPassword);
-            //printf("User: %s, Expected User: %s, Password: %s, Expected Password: %s\n", user, tempUser, password, tempPassword);
-            //printf("Is same user: %d, has same password: %d", sameUser, samePassword);
+            switch (choice)
+            {
+            case 1:
+                printf("%d - Search record\n\n", choice);
+                break;
+            
+            case 2:
+                printf("%d - Add new record\n\n", choice);
+                add_new_record(client_socket);
+                printf("Record succesfully saved in db\n");
+                break;
 
-            if(sameUser == 0 && samePassword == 0) {
-                printf("User authenticated succesfully\n");
+            case 3:
+                printf("%d - Remove record\n\n", choice);
+                break;
 
-                //Write two entries to mock database
-                FILE *myFilePtr;
-                myFilePtr = fopen("Database.txt", "w+");
-                dataEntry newDataEntry1 = { "Andrea" , "Via Tesla", "111"};
-                dataEntry newDataEntry2 = { "Simone" , "Israele", "666"};
-                writeEntry(newDataEntry1, myFilePtr);
-                writeEntry(newDataEntry2, myFilePtr);
-
-                //Count number of entries and send count to Client
-                int entriesCount = countEntries(myFilePtr, sizeof(dataEntry));
-                char entriesCountMsg[256];
-                sprintf(entriesCountMsg, "%d", entriesCount);
-                sendMsg(client_socket, entriesCountMsg);
-
-                //Read entries
-                dataEntry dataEntries[entriesCount];
-                if (entriesCount != readEntries(myFilePtr, dataEntries)) printf("An error has occured while reading entries from file");
-
-                //Send as many entries as present in the db
-                int i = 0;
-                while (i < entriesCount) {
-                    int sent = sendDataEntry(client_socket, &dataEntries[i]);
-                    printf("Sent %d bytes\n", sent);
-                    i++;
-                }
+            default:
+                break;
             }
-            //TODO: send authentication failed signal to Client
-            else printf("User failed authentication\n");
 
             printf("Closing connection.\n\n");
         }
@@ -81,3 +63,71 @@ int main(){
 
     return 0;
 }
+
+void add_new_record(int clientSocket) {
+    dataEntry newDataEntry;
+    receiveDataEntry(clientSocket, &newDataEntry);
+
+    printf("Received record: \nName: %sAddress: %sNumber: %s \n", 
+        newDataEntry.name, 
+        newDataEntry.address, 
+        newDataEntry.phoneNumber);
+
+    FILE * db = open_db_write();
+    fseek(db, 0, SEEK_END);
+    writeEntry(newDataEntry, db);
+
+    #if DEBUG
+    //Checks if record was actually written
+    fseek(db, -DATAENTRY_LENGHT, SEEK_CUR);
+    dataEntry readNewEntry;
+    readEntry(db, &readNewEntry);
+    printf("Saved record: \nName: %sAddress: %sNumber: %s \n", 
+        readNewEntry.name, 
+        readNewEntry.address, 
+        readNewEntry.phoneNumber);
+    #endif
+
+    close_db(db);
+}
+
+void print_all_entries() {
+    FILE * db = open_db_read();
+    int entriesCount = countEntries(db, sizeof(dataEntry));
+    dataEntry dataEntries[entriesCount];
+    if (entriesCount != readEntries(db, dataEntries)) printf("An error has occured while reading entries from file");
+
+    int i = 0;
+    while (i < entriesCount) {
+        printf("\nNome: %s Indirizzo: %s Numero: %s \n", 
+            dataEntries[i].name, 
+            dataEntries[i].address, 
+            dataEntries[i].phoneNumber);
+        i++;
+    }
+}
+
+void send_entries(int clientSocket) {
+
+    //Count number of entries and send count to Client
+    FILE * db = open_db_read();
+    int entriesCount = countEntries(db, sizeof(dataEntry));
+    char entriesCountMsg[256];
+    sprintf(entriesCountMsg, "%d", entriesCount);
+    sendMsg(clientSocket, entriesCountMsg);
+
+    //Read entries
+    dataEntry dataEntries[entriesCount];
+    if (entriesCount != readEntries(db, dataEntries)) printf("An error has occured while reading entries from file");
+
+    //Send as many entries as present in the db
+    int i = 0;
+    while (i < entriesCount) {
+        int sent = sendDataEntry(clientSocket, &dataEntries[i]);
+        printf("Sent %d bytes\n", sent);
+        i++;
+    }
+
+    close_db(db);
+}
+
