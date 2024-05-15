@@ -5,11 +5,11 @@
 
 #define SERVER_IP "127.0.0.1"
 #define PORT 9090
-// #define MSG_LENGTH 256
+#define SIGNAL_LENGTH 4
+#define MSG_LENGHT 256
 
-
-int getMsgLenght();
-int getDataEntryLenght();
+int receive_signal(int socket, int * buffer);
+int send_signal(int socket, char * buffer);
 
 int receiveMsg(int socket, char * buffer);
 int sendMsg(int socket, char * buffer);

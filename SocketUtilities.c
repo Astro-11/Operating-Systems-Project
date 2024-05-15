@@ -8,29 +8,31 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-int getMsgLenght() {
-    return 256;
+int receive_signal(int socket, int * buffer) {
+    char signalStr[SIGNAL_LENGTH];
+    int returnValue = recv(socket, signalStr, SIGNAL_LENGTH, 0);
+    sscanf(signalStr, "%d", buffer);
+    return returnValue;
 }
 
-int getDataEntryLenght() {
-    int size = sizeof(dataEntry);
-    return size;
+int send_signal(int socket, char * buffer) {
+    return send(socket, buffer, SIGNAL_LENGTH, 0);
 }
 
 int receiveMsg(int socket, char * buffer) {
-    return recv(socket, buffer, getMsgLenght(), 0);
+    return recv(socket, buffer, MSG_LENGHT, 0);
 }
 
 int sendMsg(int socket, char * buffer) {
-    return send(socket, buffer, getMsgLenght(), 0);
+    return send(socket, buffer, MSG_LENGHT, 0);
 }
 
 int receiveDataEntry(int socket, dataEntry * buffer) {
-    return recv(socket, buffer, getDataEntryLenght(), 0);
+    return recv(socket, buffer, DATAENTRY_LENGHT, 0);
 }
 
 int sendDataEntry(int socket, dataEntry * buffer) {
-    return send(socket, buffer, getDataEntryLenght(), 0);
+    return send(socket, buffer, DATAENTRY_LENGHT, 0);
 }
 
 void handle_error(const char *msg) {
