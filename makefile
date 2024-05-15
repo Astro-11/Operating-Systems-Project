@@ -1,4 +1,4 @@
-all: socketClientTest socketServerTest
+all: socketClientTest socketServerTest tuiPrototype
 
 socketServerTest: socketServerTest.o DatabaseHandler.o SocketUtilities.o
 	gcc socketServerTest.o DatabaseHandler.o SocketUtilities.o -o socketServerTest
@@ -17,6 +17,9 @@ socketClientTest: socketClientTest.o SocketUtilities.o
 
 socketClientTest.o: socketClientTest.c SocketUtilities.h
 	gcc -c socketClientTest.c
+
+tuiPrototype: tuiPrototype.c SocketUtilities.o DatabaseHandler.o
+	gcc -o tuiPrototype tuiPrototype.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o
 
 clean:
 	rm *.o
