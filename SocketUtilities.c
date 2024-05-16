@@ -11,7 +11,8 @@
 int receive_signal(int socket, int * buffer) {
     char signalStr[SIGNAL_LENGTH];
     int returnValue = recv(socket, signalStr, SIGNAL_LENGTH, 0);
-    sscanf(signalStr, "%d", buffer);
+    //sscanf(signalStr, "%d", buffer);
+    *buffer = (int)strtol(signalStr, 0, 10);
     return returnValue;
 }
 

@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "SocketUtilities.h"
 
@@ -23,13 +24,16 @@ int main(){
     char choiceStr[SIGNAL_LENGTH];
     fgets(choiceStr, SIGNAL_LENGTH, stdin);
     int choice;
-    sscanf(choiceStr, "%d", &choice);
+    //sscanf(choiceStr, "%d", &choice);
+    choice = (int)strtol(choiceStr, 0, 10);
 
     switch (choice)
     {
-    //TODO ADD SEARCH RECORD & REMOVE RECORD
     case 1:
-        printf("Unimplemented, try #2\n");
+        send_signal(clientSocket, choiceStr);
+        dataEntry testQuery = { "Mario" "" ""};
+        sendDataEntry(clientSocket, &testQuery);
+        receive_entries(clientSocket);
         break;
     case 2:
         send_signal(clientSocket, choiceStr);
@@ -70,10 +74,8 @@ void add_new_record(int clientSocket) {
 void receive_entries(int clientSocket) {
 
     //Receive and parse the number of entries saved in the db
-    char entriesCountMsg[MSG_LENGHT];
-    receiveMsg(clientSocket, entriesCountMsg);
-    int entriesCount;
-    sscanf(entriesCountMsg, "%d", &entriesCount);
+     int entriesCount;
+    receive_signal(clientSocket, &entriesCount);
     printf("There are %d entries:\n", entriesCount);
 
     //Receive as many entries as present
