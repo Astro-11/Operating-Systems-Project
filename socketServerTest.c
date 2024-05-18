@@ -21,7 +21,7 @@ int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataE
 int search_record_position(dataEntry entries[], int entriesCount, dataEntry query);
 int matches(dataEntry entry, dataEntry filter);
 void print_all_entries();
-void send_entries(int clientSocket);
+void send_entries(int clientSocket, dataEntry entries[], int entriesCount);
 
 int main(){
 
@@ -132,8 +132,6 @@ int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete
     return 0;
 }
 
-
-
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
     //Receive query
     dataEntry query;
@@ -148,18 +146,7 @@ void search_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     dataEntry queryResults[entriesCount];
     int resultsCount = search_records(entries, entriesCount, query, queryResults);
 
-    //Send to client the number of results
-    char countMsg[SIGNAL_LENGTH];
-    sprintf(countMsg, "%d", resultsCount);
-    send_signal(clientSocket, countMsg);
-
-    //Send to client the results
-    int i = 0;
-    while (i < resultsCount) {
-        printf("Sending %s...\n", queryResults[i].name);
-        sendDataEntry(clientSocket, &queryResults[i]);
-        i++;
-    }
+    send_entries(clientSocket, queryResults, resultsCount);
 }
 
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]) {
@@ -243,28 +230,19 @@ void print_all_entries() {
     }
 }
 
-void send_entries(int clientSocket) {
+void send_entries(int clientSocket, dataEntry entries[], int entriesCount) {
+    //Send to client the number of results
+    char countMsg[SIGNAL_LENGTH];
+    sprintf(countMsg, "%d", entriesCount);
+    send_signal(clientSocket, countMsg);
 
-    //Count number of entries and send count to Client
-    FILE * db = open_db_read();
-    int entriesCount = countEntries(db, sizeof(dataEntry));
-    char entriesCountMsg[256];
-    sprintf(entriesCountMsg, "%d", entriesCount);
-    sendMsg(clientSocket, entriesCountMsg);
-
-    //Read entries
-    dataEntry dataEntries[entriesCount];
-    if (entriesCount != readEntries(db, dataEntries)) printf("An error has occured while reading entries from file");
-
-    //Send as many entries as present in the db
+    //Send to client the results
     int i = 0;
     while (i < entriesCount) {
-        int sent = sendDataEntry(clientSocket, &dataEntries[i]);
-        printf("Sent %d bytes\n", sent);
+        printf("Sending %s...\n", entries[i].name);
+        sendDataEntry(clientSocket, &entries[i]);
         i++;
     }
-
-    close_db(db);
 }
 
 int matches(dataEntry entry, dataEntry filter) {
