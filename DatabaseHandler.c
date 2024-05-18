@@ -140,6 +140,45 @@ void readEntireFile(FILE *filePointer) {
     } while (readChars <= 0);
 }
 
+//Removes whitespaces and /n
+//Returns lenght of string after cleaning
+int clean_string(char str[]) {
+    int len = strlen(str);
+    if (len <= 0) return 0;
+    int i = 0;
+    while (i < len) {
+        if (isspace(str[i]) != 0) {
+            int j = i;
+            //Shift all chars one place to the left
+            while (j < len) {
+                //printf("Char %c changed into %c\n", str[j], str[j+1]);
+                str[j] = str[j+1];
+                j++;
+            }
+            len--;
+        }
+        else i++;
+    }
+    return len;
+}
+
+//Return 0 if entry is valid, negative otherwise
+int validate_entry(dataEntry entry) {
+    //char buffer[256] = "A n\ndr  ea";
+    //char buffer[256] = "   \n ";
+    char buffer[256];
+    strcpy(buffer, entry.name);
+    clean_string(buffer);
+    if (strlen(buffer) <= 0) return -1;
+    strcpy(buffer, entry.address);
+    clean_string(buffer);
+    if (strlen(buffer) <= 0) return -2;
+    strcpy(buffer, entry.phoneNumber);
+    clean_string(buffer);
+    if (strlen(buffer) <= 0) return -3;
+    return 0;
+}
+
 char* rtrim(char *str) {
     int len = strlen(str);
     while (len > 0 && isspace((unsigned char)str[len - 1])) {

@@ -27,6 +27,10 @@ int countEntries(FILE *filePointer, int sizeOfEntry);
 
 int readEntries(FILE *filePointer, dataEntry dataEntries[]);
 
+int clean_string(char str[]);
+
+int validate_entry(dataEntry entry);
+
 char* rtrim(char *str);
 
 #endif // DATABASE_HANDLER_H
