@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <ctype.h>
 
 #include "DatabaseHandler.h"
 #include "SocketUtilities.h"
@@ -11,14 +12,20 @@
 #define DEBUG 1
 
 void add_new_record(int clientSocket);
+void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
+void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
+
+int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete);
+int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]);
+
+int search_record_position(dataEntry entries[], int entriesCount, dataEntry query);
+int matches(dataEntry entry, dataEntry filter);
 void print_all_entries();
 void send_entries(int clientSocket);
-void search_record(int clientSocket, dataEntry entries[], int entriesCount);
-int matches(dataEntry entry, dataEntry filter);
 
 int main(){
 
-    int server_socket = create_server_socket(PORT);
+    int serverSocket = create_server_socket(PORT);
 
     printf("Ctrl+C to terminate the server.\n\n");
 
@@ -32,32 +39,33 @@ int main(){
 
     while(1){
         printf("Server is online listening for connection...\n");
-        listen(server_socket, 10);
-        int client_socket = accept_client_connection(server_socket);
+        listen(serverSocket, 10);
+        int clientSocket = accept_client_connection(serverSocket);
 
-        if (fork() == 0)
-        {
+        //if (fork() == 0)
+        //{
             printf("Connection enstablished, awaiting user request. \n\n");
 
             int choice;
-            receive_signal(client_socket, &choice);
+            receive_signal(clientSocket, &choice);
 
             switch (choice)
             {
             case 1:
                 printf("%d - Search database\n\n", choice);
-                search_record(client_socket, entries, entriesCount);
+                search_record_procedure(clientSocket, entries, entriesCount);
                 printf("Search results succesfully sent to client\n");
                 break;
 
             case 2:
                 printf("%d - Add new record\n\n", choice);
-                add_new_record(client_socket);
+                add_new_record(clientSocket);
                 printf("Record succesfully saved in db\n");
                 break;
 
             case 3:
                 printf("%d - Remove record\n\n", choice);
+                delete_record_procedure(clientSocket, entries, entriesCount);
                 break;
 
             default:
@@ -65,16 +73,69 @@ int main(){
             }
 
             printf("Closing connection.\n\n");
-        }
-        else close(client_socket);
+        //}
+        //else close(clientSocket);
     }
     
-    close(server_socket);
+    close(serverSocket);
 
     return 0;
 }
 
-void search_record(int clientSocket, dataEntry entries[], int entriesCount) {
+void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
+    dataEntry entryToDelete;
+    receiveDataEntry(clientSocket, &entryToDelete);
+
+    int outcome = delete_record(entries, entriesCount, entryToDelete);
+
+    //Send outcome signal
+    char outcomeMsg[SIGNAL_LENGTH];
+    sprintf(outcomeMsg, "%d", outcome);
+    send_signal(clientSocket, outcomeMsg);
+
+    //Send possible failure message
+    char failureMessage[MSG_LENGHT];
+    if (outcome != 0) {
+        if (outcome == -1) {
+            char tempFailureMessage[MSG_LENGHT] = "All the fields in the query must be present";
+            strcpy(failureMessage, tempFailureMessage);
+        }
+        else if (outcome == -2) {
+            char tempFailureMessage[MSG_LENGHT] = "There are no such entries in the database";
+            strcpy(failureMessage, tempFailureMessage);
+        }
+        sendMsg(clientSocket, failureMessage);
+        printf("Outcome %d - failed to remove record: %s\n", outcome, failureMessage);
+        return;
+    }
+
+    printf("Record succesfully removed from database\n");
+}
+
+//Returns 0 if succesful, -1 if all dataEntry fields not present, -2 if dataEntry not found
+int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete) {
+    int outcome = 0;
+
+    //Validate query
+    outcome = validate_entry(entryToDelete);
+    if (outcome < 0) return -1;
+
+    //This assumes that there cannot be duplicated entries
+    //Search record
+    int entryToDeletePosition = search_record_position(entries, entriesCount, entryToDelete);
+    if (entryToDeletePosition < 0) return -2;
+
+    //Delete (for now only sets first char to \0)
+    entries[entryToDeletePosition].name[0] = '\0';
+    entries[entryToDeletePosition].address[0] = '\0';
+    entries[entryToDeletePosition].phoneNumber[0] = '\0';
+    return 0;
+}
+
+
+
+void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
+    //Receive query
     dataEntry query;
     receiveDataEntry(clientSocket, &query);
 
@@ -83,33 +144,9 @@ void search_record(int clientSocket, dataEntry entries[], int entriesCount) {
                     query.address, 
                     query.phoneNumber);
                     
-    const char *fileName = "filteredEntryees.anActualReadableTxtFileAndNotRandomBytes";
-
-    FILE *fp = fopen(fileName, "w");
-    if (fp == NULL) {
-        perror("Error opening file");
-        //return 1; // Return an error code
-    }
-
+    //Search for record
     dataEntry queryResults[entriesCount];
-    int resultsCount = 0;
-
-    for(int i = 0; i < 30; i++){
-        if(matches(entries[i], query)){
-            queryResults[resultsCount++] = entries[i];
-
-            fprintf(fp, "Name____: %s\n", entries[i].name);
-            fprintf(fp, "Address_: %s\n", entries[i].address);
-            fprintf(fp, "Phone___: %s\n", entries[i].phoneNumber);
-            fprintf(fp, "----------------\n");
-            printf("beep!\n");
-        } else {
-            printf("nope!\n");
-        }
-    }
-
-    printf("\nSearch results saved locally in file.\n\n");
-    fclose(fp);
+    int resultsCount = search_records(entries, entriesCount, query, queryResults);
 
     //Send to client the number of results
     char countMsg[SIGNAL_LENGTH];
@@ -123,6 +160,44 @@ void search_record(int clientSocket, dataEntry entries[], int entriesCount) {
         sendDataEntry(clientSocket, &queryResults[i]);
         i++;
     }
+}
+
+int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]) {
+    const char *fileName = "filteredEntryees.anActualReadableTxtFileAndNotRandomBytes";
+
+    FILE *fp = fopen(fileName, "w");
+    if (fp == NULL) {
+        perror("Error opening file");
+        //return 1; // Return an error code
+    }
+
+    int resultsCount = 0;
+
+    for(int i = 0; i < entriesCount; i++){
+        if(matches(entries[i], query)){
+            queryResults[resultsCount++] = entries[i];
+
+            fprintf(fp, "Name____: %s\n", entries[i].name);
+            fprintf(fp, "Address_: %s\n", entries[i].address);
+            fprintf(fp, "Phone___: %s\n", entries[i].phoneNumber);
+            fprintf(fp, "----------------\n");
+            //printf("beep!\n");
+        } else {
+            //printf("nope!\n");
+        }
+    }
+
+    //printf("\nSearch results saved locally in file.\n\n");
+    fclose(fp);
+    return resultsCount;
+}
+
+//Returns query position in array or -1 if query not present
+int search_record_position(dataEntry entries[], int entriesCount, dataEntry query) {
+    for(int i = 0; i < entriesCount; i++) {
+        if(matches(entries[i], query)) return i;
+    }
+    return -1;
 }
 
 void add_new_record(int clientSocket) {

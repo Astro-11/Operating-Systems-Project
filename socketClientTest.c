@@ -9,6 +9,7 @@
 #include "SocketUtilities.h"
 
 void add_new_record(int clientSocket);
+void delete_record(int clientSocket);
 void receive_entries(int clientSocket);
 
 int main(){
@@ -40,7 +41,8 @@ int main(){
         add_new_record(clientSocket);
         break;
     case 3:
-        printf("Unimplemented, try #2\n");
+        send_signal(clientSocket, choiceStr);
+        delete_record(clientSocket);
         break;
     default:
         printf("Invalid option selected, try again: \n");
@@ -69,6 +71,22 @@ void add_new_record(int clientSocket) {
     strcpy(newDataEntry.address, address);
     strcpy(newDataEntry.phoneNumber, phoneNumber);
     sendDataEntry(clientSocket, &newDataEntry);
+}
+
+void delete_record(int clientSocket) {
+    dataEntry testEntry = {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"};
+    sendDataEntry(clientSocket, &testEntry);
+
+    //Receive validation
+    int outcome;
+    receive_signal(clientSocket, &outcome);
+    if (outcome != 0) {
+        char failureMsg[MSG_LENGHT];
+        receiveMsg(clientSocket, failureMsg);
+        printf("Request failed: %s\n", failureMsg);
+        return;
+    } 
+    else printf("%s succesfully removed from database\n", testEntry.name);
 }
 
 void receive_entries(int clientSocket) {
