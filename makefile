@@ -1,10 +1,10 @@
-all: socketClientTest socketServerTest tuiPrototype
+all: clientTest server tuiPrototype
 
-socketServerTest: socketServerTest.o DatabaseHandler.o SocketUtilities.o
-	gcc socketServerTest.o DatabaseHandler.o SocketUtilities.o -o socketServerTest
+server: server.o DatabaseHandler.o SocketUtilities.o
+	gcc server.o DatabaseHandler.o SocketUtilities.o -o server
 
-socketServerTest.o: socketServerTest.c DatabaseHandler.h SocketUtilities.h
-	gcc -c socketServerTest.c
+server.o: server.c DatabaseHandler.h SocketUtilities.h
+	gcc -c server.c
 
 DatabaseHandler.o: DatabaseHandler.c DatabaseHandler.h
 	gcc -c DatabaseHandler.c 
@@ -12,11 +12,11 @@ DatabaseHandler.o: DatabaseHandler.c DatabaseHandler.h
 SocketUtilities.o: SocketUtilities.c SocketUtilities.h DatabaseHandler.h
 	gcc -c SocketUtilities.c 
 
-socketClientTest: socketClientTest.o SocketUtilities.o
-	gcc socketClientTest.c SocketUtilities.o -o socketClientTest
+clientTest: clientTest.o SocketUtilities.o
+	gcc clientTest.c SocketUtilities.o -o clientTest
 
-socketClientTest.o: socketClientTest.c SocketUtilities.h
-	gcc -c socketClientTest.c
+clientTest.o: clientTest.c SocketUtilities.h
+	gcc -c clientTest.c
 
 tuiPrototype: tuiPrototype.c SocketUtilities.o DatabaseHandler.o
 	gcc -o tuiPrototype tuiPrototype.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o

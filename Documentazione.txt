@@ -74,7 +74,7 @@ DatabaseHandler:
         Legge tutti i record presenti nel database.
         Restituisce il numero di record letti.
 
-    int clean_string(char str[]);
+    int remove_all_whitespace(char str[]);
         Pulisce una stringa rimuovendo ogni tipo di spazio (' ' , '\n' , '\t' etc.)
         Restituisce la lunghezza della stringa dopo la procedura.
 

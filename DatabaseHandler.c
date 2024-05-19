@@ -4,7 +4,6 @@
 #include "DatabaseHandler.h"
 
 #define DEBUG 0
-
 //Not used for now
 #define IS_READING 1
 #define IS_EDITING 2
@@ -44,7 +43,7 @@ void debug_populate_db() {
         {"Pietro Donati", "Via San Raffaele 30, 20121 Milano", "+39 02 5678901"}
     };
 
-    FILE * db = fopen("Database.txt", "w+"); //WARNING: OVERWRITES!
+    FILE * db = fopen(YELLOWPAGES_DB, "w+"); //WARNING: OVERWRITES!
 
     for(int i = 0; i < 30; i++) {
         writeEntry(database[i], db);
@@ -55,14 +54,15 @@ void debug_populate_db() {
 
 FILE * open_db_read() {
     FILE *myFilePtr;
-    myFilePtr = fopen("Database.txt", "r");
+    myFilePtr = fopen(YELLOWPAGES_DB, "r");
     if (myFilePtr == NULL) perror("Failed to open db: ");
     return myFilePtr; 
 }
 
+//NOTE S: We need to save structs in byte, and we don't need to read them at the same time. The flag should be wb.
 FILE * open_db_write() {
     FILE *myFilePtr;
-    myFilePtr = fopen("Database.txt", "r+");
+    myFilePtr = fopen(YELLOWPAGES_DB, "r+"); 
     if (myFilePtr == NULL) perror("Failed to open db: ");
     return myFilePtr;
 }
@@ -73,6 +73,7 @@ void close_db(FILE *filePointer) {
     if (errorCode == EOF) perror("Failed to close db: ");
 }
 
+//NOTE S: Given that it only saves the writing of two paramaters this may be an unneded abstraction
 void writeEntry(dataEntry dataEntry, FILE *filePointer) {
     fwrite(&dataEntry, sizeof(dataEntry), 1, filePointer);
 }
@@ -142,9 +143,13 @@ void readEntireFile(FILE *filePointer) {
 
 //Removes whitespaces and /n
 //Returns lenght of string after cleaning
-int clean_string(char str[]) {
+int remove_all_whitespace(char str[]) {
+    
     int len = strlen(str);
-    if (len <= 0) return 0;
+    
+    if (len <= 0) 
+        return 0;
+    
     int i = 0;
     while (i < len) {
         if (isspace(str[i]) != 0) {
@@ -168,13 +173,13 @@ int validate_entry(dataEntry entry) {
     //char buffer[256] = "   \n ";
     char buffer[256];
     strcpy(buffer, entry.name);
-    clean_string(buffer);
+    remove_all_whitespace(buffer);
     if (strlen(buffer) <= 0) return -1;
     strcpy(buffer, entry.address);
-    clean_string(buffer);
+    remove_all_whitespace(buffer);
     if (strlen(buffer) <= 0) return -2;
     strcpy(buffer, entry.phoneNumber);
-    clean_string(buffer);
+    remove_all_whitespace(buffer);
     if (strlen(buffer) <= 0) return -3;
     return 0;
 }
@@ -188,10 +193,24 @@ char* rtrim(char *str) {
     return str;
 }
 
+void save_database_to_file(dataEntry *db, int db_size){
+    // If we change the function open_db_write() it can be used here too
+    FILE *fp_database = fopen(YELLOWPAGES_DB, "wb"); 
+    if (fp_database == NULL) 
+        perror("Failed to open db: ");
+
+    // NOTE S: Should add error handling
+    for(int i = 0; i < db_size; i++)
+        if ( strcmp(db[i].name, "\0") != 0)
+            fwrite(&db[i], sizeof(dataEntry), 1, fp_database);
+    
+    fclose(fp_database);
+}
+
 /*int main(int argc, char const *argv[])
 {
     FILE *myFilePtr;
-    myFilePtr = fopen("Database.txt", "w+");
+    myFilePtr = fopen(YELLOWPAGES_DB, "w+");
     if (myFilePtr == NULL) printf(ERROR);
 
     dataEntry newDataEntry1 = { "Andrea" , "Via Tesla", "111"};

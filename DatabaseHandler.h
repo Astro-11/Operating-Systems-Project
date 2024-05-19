@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #define DATAENTRY_LENGHT sizeof(dataEntry)
+#define YELLOWPAGES_DB "YellowPage.data"
 
 typedef struct {
     char name[256];
@@ -27,10 +28,12 @@ int countEntries(FILE *filePointer, int sizeOfEntry);
 
 int readEntries(FILE *filePointer, dataEntry dataEntries[]);
 
-int clean_string(char str[]);
+int remove_all_whitespace(char str[]);
 
 int validate_entry(dataEntry entry);
 
 char* rtrim(char *str);
+
+void save_database_to_file(dataEntry *db, int db_size);
 
 #endif // DATABASE_HANDLER_H

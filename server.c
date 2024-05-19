@@ -1,10 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <ctype.h>
+#include <signal.h>
 
 #include "DatabaseHandler.h"
 #include "SocketUtilities.h"
@@ -22,8 +23,21 @@ int search_record_position(dataEntry entries[], int entriesCount, dataEntry quer
 int matches(dataEntry entry, dataEntry filter);
 void print_all_entries();
 void send_entries(int clientSocket, dataEntry entries[], int entriesCount);
+void handle_sigint(int sig);
+
+// #################################################################################
+// #################################################################################
+
+/* 
+ * This global variables are needed because it's not possible to 
+ * pass arguments to the function that handles SIGINT.
+ *
+ */
+dataEntry *runtime_db; 
+int total_db_entries;
 
 int main(){
+    
 
     int serverSocket = create_server_socket(PORT);
 
@@ -31,17 +45,32 @@ int main(){
 
     debug_populate_db(); //WARNING: OVERWRITES!
     print_all_entries();
-    FILE * db = open_db_read();
-    int entriesCount = countEntries(db, DATAENTRY_LENGHT);
-    dataEntry entries[entriesCount];
-    readEntries(db, entries);
-    close_db(db);
+    FILE * fp_database = open_db_read();
+    //NOTE S: needs to be incremented when admin adds new entry
+    int total_db_entries = countEntries(fp_database, DATAENTRY_LENGHT);
+    
+    // NOTE S: Do we need to handle overflowing the array at
+    int runtime_db_size = 256;
+    while(total_db_entries*2 < runtime_db_size){
+        runtime_db_size *=2;
+    }
+
+    //NOTE S: if database data is lost it may need the static prefix
+    dataEntry placeholder[runtime_db_size];
+    runtime_db = placeholder;
+    
+    readEntries(fp_database, runtime_db);
+    close_db(fp_database);
+
+    // Handles saving database when server is terminated 
+    signal(SIGINT, handle_sigint);
 
     while(1){
         printf("Server is online listening for connection...\n");
         listen(serverSocket, 10);
         int clientSocket = accept_client_connection(serverSocket);
 
+        //NOTE S: Why was fork removed?
         //if (fork() == 0)
         //{
             printf("Connection enstablished, awaiting user request. \n\n");
@@ -53,7 +82,7 @@ int main(){
             {
             case 1:
                 printf("%d - Search database\n\n", choice);
-                search_record_procedure(clientSocket, entries, entriesCount);
+                search_record_procedure(clientSocket, runtime_db, total_db_entries);
                 printf("Search results succesfully sent to client\n");
                 break;
 
@@ -65,7 +94,7 @@ int main(){
 
             case 3:
                 printf("%d - Remove record\n\n", choice);
-                delete_record_procedure(clientSocket, entries, entriesCount);
+                delete_record_procedure(clientSocket, runtime_db, total_db_entries);
                 break;
 
             default:
@@ -187,6 +216,8 @@ int search_record_position(dataEntry entries[], int entriesCount, dataEntry quer
     return -1;
 }
 
+
+//NOTE S: this function would be deprecated because we never save to file single a single Entry
 void add_new_record(int clientSocket) {
     dataEntry newDataEntry;
     receiveDataEntry(clientSocket, &newDataEntry);
@@ -261,3 +292,10 @@ int matches(dataEntry entry, dataEntry filter) {
     return 1;
 }
 
+void handle_sigint(int sig) {
+    printf("Caught signal %d (Ctrl+C). Cleaning up...\n", sig);
+    printf("Saving runtime database to file...");
+    
+    save_database_to_file(runtime_db, total_db_entries);
+    exit(0); 
+}
