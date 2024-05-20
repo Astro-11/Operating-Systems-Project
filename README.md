@@ -11,6 +11,12 @@ TODO:
     - [ ] Name is alphanum and trim left and right
     - [ ] Phone number is num, has ten characters, allows indiscriminate white space when added or searched, is stored with no space for more uniform searching but is printed with a `"012 345 6789"` formatting. 
 - [ ] Update all methods to use snake_case and all variables to use camelCase
+- [ ] Update clients' internal entries to mantain database consistency after superuser commits changes to db
+- [ ] Login and logout
+    - [ ] Implement server-side login authentification 
+    - [ ] Add logout options for clients to close application
+    - [ ] Add SIGINT handling for client: it should inform the server of its premature demise
+
 
 QUESTIONS:
 - [ ] What do we want to do with non ASCII characters like 'ò','è' and UNICODE symbols?
