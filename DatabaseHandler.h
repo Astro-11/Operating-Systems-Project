@@ -20,7 +20,7 @@ FILE * open_db_write();
 
 void close_db(FILE *filePointer);
 
-void writeEntry(dataEntry dataEntry, FILE *filePointer);
+int save_entry(dataEntry dataEntry, FILE *filePointer);
 
 void readEntry(FILE *filePointer, dataEntry * readEntry);
 
@@ -34,6 +34,6 @@ int validate_entry(dataEntry entry);
 
 char* rtrim(char *str);
 
-void save_database_to_file(dataEntry *db, int db_size);
+int save_database_to_file(dataEntry *db, int db_size);
 
 #endif // DATABASE_HANDLER_H

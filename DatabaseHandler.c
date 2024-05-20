@@ -46,7 +46,7 @@ void debug_populate_db() {
     FILE * db = fopen(YELLOWPAGES_DB, "w+"); //WARNING: OVERWRITES!
 
     for(int i = 0; i < 30; i++) {
-        writeEntry(database[i], db);
+        save_entry(database[i], db);
     }
 
     close_db(db);
@@ -59,10 +59,12 @@ FILE * open_db_read() {
     return myFilePtr; 
 }
 
-//NOTE S: We need to save structs in byte, and we don't need to read them at the same time. The flag should be wb.
+//NOTE A: might be worth it to create at least one backup before overwriting the whole db
+//WARNING: OVERWRITES!
 FILE * open_db_write() {
     FILE *myFilePtr;
-    myFilePtr = fopen(YELLOWPAGES_DB, "r+"); 
+    //myFilePtr = fopen("YelloPageBackup.data", "r"); Copy into this before overwriting?
+    myFilePtr = fopen(YELLOWPAGES_DB, "wb"); 
     if (myFilePtr == NULL) perror("Failed to open db: ");
     return myFilePtr;
 }
@@ -74,8 +76,14 @@ void close_db(FILE *filePointer) {
 }
 
 //NOTE S: Given that it only saves the writing of two paramaters this may be an unneded abstraction
-void writeEntry(dataEntry dataEntry, FILE *filePointer) {
-    fwrite(&dataEntry, sizeof(dataEntry), 1, filePointer);
+//NOTE A: Given that it prevents me from saving with a wrong size, this is a needed abstraction
+//NOTE A: Also, we should include some validation.
+//Returns 0 if succesful, -1 if trying to save invalid dataEntry
+int save_entry(dataEntry newDataEntry, FILE *filePointer) {
+    if (validate_entry(newDataEntry) != 0)
+        return -1;
+    fwrite(&newDataEntry, sizeof(dataEntry), 1, filePointer);
+    return 0;
 }
 
 void readEntry(FILE *filePointer, dataEntry * readEntry) {
@@ -193,18 +201,20 @@ char* rtrim(char *str) {
     return str;
 }
 
-void save_database_to_file(dataEntry *db, int db_size){
-    // If we change the function open_db_write() it can be used here too
-    FILE *fp_database = fopen(YELLOWPAGES_DB, "wb"); 
-    if (fp_database == NULL) 
-        perror("Failed to open db: ");
+//NOTE A: the database IS the file. Referring to runtime dataEntry arrays as db might be confusing.
+//Returns the number of entries actually saved to db
+int save_database_to_file(dataEntry *db, int db_size){
+    FILE* db = open_db_write();
 
-    // NOTE S: Should add error handling
-    for(int i = 0; i < db_size; i++)
-        if ( strcmp(db[i].name, "\0") != 0)
-            fwrite(&db[i], sizeof(dataEntry), 1, fp_database);
+    int savedEntriesCount;
+    int outcome;
+    for(int i = 0; i < db_size; i++) {
+        outcome = save_entry(db[i], db);
+        if (outcome = 0) savedEntriesCount++;
+    }
     
-    fclose(fp_database);
+    close_db(db);
+    return savedEntriesCount;
 }
 
 /*int main(int argc, char const *argv[])
@@ -215,8 +225,8 @@ void save_database_to_file(dataEntry *db, int db_size){
 
     dataEntry newDataEntry1 = { "Andrea" , "Via Tesla", "111"};
     dataEntry newDataEntry2 = { "Simone" , "Israele", "666"};
-    writeEntry(newDataEntry1, myFilePtr);
-    writeEntry(newDataEntry2, myFilePtr);
+    save_entry(newDataEntry1, myFilePtr);
+    save_entry(newDataEntry2, myFilePtr);
 
     int entriesCount = countEntries(myFilePtr, sizeof(dataEntry));
     dataEntry dataEntries[entriesCount];
