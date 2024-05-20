@@ -16,6 +16,7 @@ void add_new_record_procedure(int clientSocket);
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 
+void add_new_record(int clientSocket, dataEntry newDataEntry);
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete);
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]);
 

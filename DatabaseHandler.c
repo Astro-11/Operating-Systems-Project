@@ -203,13 +203,13 @@ char* rtrim(char *str) {
 
 //NOTE A: the database IS the file. Referring to runtime dataEntry arrays as db might be confusing.
 //Returns the number of entries actually saved to db
-int save_database_to_file(dataEntry *db, int db_size){
+int save_database_to_file(dataEntry entries[], int entriesCount){
     FILE* db = open_db_write();
 
     int savedEntriesCount;
     int outcome;
-    for(int i = 0; i < db_size; i++) {
-        outcome = save_entry(db[i], db);
+    for(int i = 0; i < entriesCount; i++) {
+        outcome = save_entry(entries[i], db);
         if (outcome = 0) savedEntriesCount++;
     }
     
