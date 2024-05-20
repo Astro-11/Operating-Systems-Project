@@ -17,6 +17,7 @@ QUESTIONS:
     - If we handle them we do it client side or server side?
     - We need to test the behaviour of our code in this cases 
 - [ ] Do we need/want to handle overfilling the array at runtime?
+- [ ] Should we rename the "dataEntry" struct to "record"? It seems to me like you find the term confusing for things like entries[].
 
 
 ---

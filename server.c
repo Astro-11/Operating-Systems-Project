@@ -12,7 +12,7 @@
 
 #define DEBUG 1
 
-void add_new_record(int clientSocket);
+void add_new_record_procedure(int clientSocket);
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 
@@ -35,6 +35,7 @@ void handle_sigint(int sig);
  */
 dataEntry *runtime_db; 
 int total_db_entries;
+//NOTE A: naming convention for variables not respected!
 
 int main(){
     
@@ -71,6 +72,7 @@ int main(){
         int clientSocket = accept_client_connection(serverSocket);
 
         //NOTE S: Why was fork removed?
+        //NOTE A: Somebody didn't read my commits
         //if (fork() == 0)
         //{
             printf("Connection enstablished, awaiting user request. \n\n");
@@ -88,7 +90,7 @@ int main(){
 
             case 2:
                 printf("%d - Add new record\n\n", choice);
-                add_new_record(clientSocket);
+                add_new_record_procedure(clientSocket);
                 printf("Record succesfully saved in db\n");
                 break;
 
@@ -218,7 +220,9 @@ int search_record_position(dataEntry entries[], int entriesCount, dataEntry quer
 
 
 //NOTE S: this function would be deprecated because we never save to file single a single Entry
-void add_new_record(int clientSocket) {
+//NOTE A: this function is a server procedure, what it actually does when saving should be irrelevant. 
+//NOTE A: the code will be refactored to better reflect this.
+void add_new_record_procedure(int clientSocket) {
     dataEntry newDataEntry;
     receiveDataEntry(clientSocket, &newDataEntry);
 
@@ -227,9 +231,13 @@ void add_new_record(int clientSocket) {
         newDataEntry.address, 
         newDataEntry.phoneNumber);
 
+    add_new_record(clientSocket, newDataEntry);
+}
+
+void add_new_record(int clientSocket, dataEntry newDataEntry) {
     FILE * db = open_db_write();
     fseek(db, 0, SEEK_END);
-    writeEntry(newDataEntry, db);
+    save_entry(newDataEntry, db);
 
     #if DEBUG
     //Checks if record was actually written
