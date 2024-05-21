@@ -1,4 +1,4 @@
-SocketClientTest:
+## SocketClientTest:
 
     void add_new_record(int clientSocket);
         Richiede al server l'aggiunta di un nuovo record.
@@ -11,7 +11,7 @@ SocketClientTest:
         Riceve prima un segnale contenente il numero di record e poi molteplici messaggi contenenti le strutture dati.
 
 
-SocketServerTest:
+## SocketServerTest:
 
     void add_new_record(int clientSocket);
         Gestisce le richieste di aggiunta di un nuovo record al database.
@@ -44,7 +44,7 @@ SocketServerTest:
         Invia la desiderata collezione di record al client specificato.
 
 
-DatabaseHandler:
+## DatabaseHandler:
 
     void debug_populate_db();
         Funzione di debug, popola il database con 30 record prestabiliti.
