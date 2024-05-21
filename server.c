@@ -15,10 +15,12 @@
 void add_new_record_procedure(int clientSocket);
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
+void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 
 void add_new_record(int clientSocket, dataEntry newDataEntry);
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete);
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]);
+void edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry);
 
 int search_record_position(dataEntry entries[], int entriesCount, dataEntry query);
 int matches(dataEntry entry, dataEntry filter);
@@ -39,7 +41,6 @@ int total_db_entries;
 //NOTE A: naming convention for variables not respected!
 
 int main(){
-    
 
     int serverSocket = create_server_socket(PORT);
 
@@ -47,23 +48,24 @@ int main(){
 
     debug_populate_db(); //WARNING: OVERWRITES!
     print_all_entries();
+    
     FILE * fp_database = open_db_read();
     //NOTE S: needs to be incremented when admin adds new entry
     int total_db_entries = countEntries(fp_database, DATAENTRY_LENGHT);
-    
+
     // NOTE S: Do we need to handle overflowing the array at
     int runtime_db_size = 256;
-    while(total_db_entries*2 < runtime_db_size){
+    while(runtime_db_size < total_db_entries*2){
         runtime_db_size *=2;
     }
 
     //NOTE S: if database data is lost it may need the static prefix
     dataEntry placeholder[runtime_db_size];
     runtime_db = placeholder;
-    
+
     readEntries(fp_database, runtime_db);
     close_db(fp_database);
-
+    
     // Handles saving database when server is terminated 
     signal(SIGINT, handle_sigint);
 
@@ -77,7 +79,6 @@ int main(){
         //if (fork() == 0)
         //{
             printf("Connection enstablished, awaiting user request. \n\n");
-
             int choice;
             receive_signal(clientSocket, &choice);
 
@@ -98,6 +99,11 @@ int main(){
             case 3:
                 printf("%d - Remove record\n\n", choice);
                 delete_record_procedure(clientSocket, runtime_db, total_db_entries);
+                break;
+
+            case 4:
+                printf("%d - Edit record\n\n", choice);
+                edit_record_procedure(clientSocket, runtime_db, total_db_entries);
                 break;
 
             default:
@@ -163,6 +169,40 @@ int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete
     entries[entryToDeletePosition].phoneNumber[0] = '\0';
     return 0;
 }
+
+void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
+    dataEntry entryToEdit;
+    receiveDataEntry(clientSocket, &entryToEdit);
+    dataEntry editedEntry;
+    receiveDataEntry(clientSocket, &editedEntry);
+
+    edit_record(clientSocket, entries, entriesCount, entryToEdit, editedEntry);
+}
+
+void edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
+    int position = search_record_position(entries, entriesCount, entryToEdit);
+    char outcomeMsg[SIGNAL_LENGTH];
+    sprintf(outcomeMsg, "%d", position);
+    send_signal(clientSocket, outcomeMsg);
+
+    if (position < 0) {
+        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: no such entry in the database\n";
+        printf("%s", errorMessage);
+        sendMsg(clientSocket, errorMessage);
+        return;
+    }
+
+    if (strlen(editedEntry.name) > 0)
+    strcpy(entries[position].name, editedEntry.name);
+    if (strlen(editedEntry.address) > 0)
+    strcpy(entries[position].address, editedEntry.address);
+    if (strlen(editedEntry.phoneNumber) > 0)
+    strcpy(entries[position].phoneNumber, editedEntry.phoneNumber);
+
+    //For now only prints name after success
+    printf("Edit was a success: new name %s\n", entries[position].name);
+}
+
 
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
     //Receive query

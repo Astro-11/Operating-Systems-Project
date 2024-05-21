@@ -11,6 +11,7 @@
 void add_new_record(int clientSocket);
 void delete_record(int clientSocket);
 void receive_entries(int clientSocket);
+void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry);
 
 int main(){
 
@@ -20,7 +21,8 @@ int main(){
     printf("Select an option:\n"
             "1 - Search record\n"
             "2 - Add new record\n"
-            "3 - Remove record\n");
+            "3 - Remove record\n"
+            "4 - Edit record\n");
 
     char choiceStr[SIGNAL_LENGTH];
     fgets(choiceStr, SIGNAL_LENGTH, stdin);
@@ -44,9 +46,16 @@ int main(){
         send_signal(clientSocket, choiceStr);
         delete_record(clientSocket);
         break;
+    case 4:
+        send_signal(clientSocket, choiceStr);
+        dataEntry entryToEdit = {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"};
+        dataEntry editedEntry = {"Mario Draghi", "", ""};
+        edit_record(clientSocket, entryToEdit, editedEntry);
+        break;
     default:
         printf("Invalid option selected, try again: \n");
         goto choice_loop;
+        break;
     }
 
     close(clientSocket);
@@ -87,6 +96,21 @@ void delete_record(int clientSocket) {
         return;
     } 
     else printf("%s succesfully removed from database\n", testEntry.name);
+}
+
+void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry) {
+    sendDataEntry(clientSocket, &entryToEdit);
+    sendDataEntry(clientSocket, &editedEntry);
+
+    int outcome;
+    receive_signal(clientSocket, &outcome);
+    if (outcome < 0) {
+        char failureMsg[MSG_LENGHT];
+        receiveMsg(clientSocket, failureMsg);
+        printf("Request failed: %s\n", failureMsg);
+    }
+
+    printf("Entry succesfully edited\n");
 }
 
 void receive_entries(int clientSocket) {
