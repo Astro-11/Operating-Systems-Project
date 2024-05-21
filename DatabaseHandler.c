@@ -81,9 +81,9 @@ void close_db(FILE *filePointer) {
 //Returns 0 if succesful, -1 if trying to save invalid dataEntry
 int save_entry(dataEntry newDataEntry, FILE *filePointer) {
     if (validate_entry(newDataEntry) != 0)
-        return -1;
+        return FALSE;
     fwrite(&newDataEntry, sizeof(dataEntry), 1, filePointer);
-    return 0;
+    return TRUE;
 }
 
 void readEntry(FILE *filePointer, dataEntry * readEntry) {
@@ -206,13 +206,14 @@ char* rtrim(char *str) {
 int save_database_to_file(dataEntry entries[], int entriesCount){
     FILE* db = open_db_write();
 
-    int savedEntriesCount;
-    int outcome;
-    for(int i = 0; i < entriesCount; i++) {
-        outcome = save_entry(entries[i], db);
-        if (outcome = 0) savedEntriesCount++;
-    }
+    int savedEntriesCount = 0;
+    for(int i = 0; i < entriesCount; i++)
+        if (save_entry(entries[i], db))
+            savedEntriesCount++;
     
+    // if (fclose(db) == EOF) 
+    //     perror("Failed to close db: ");
+
     close_db(db);
     return savedEntriesCount;
 }
