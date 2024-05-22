@@ -468,15 +468,15 @@ int loginFormWindow() {
                 form_driver(my_form, REQ_VALIDATION);
 
                 // Retrieve field values
-                char *name = field_buffer(fields[0], 0);
-                char *pass = field_buffer(fields[1], 0);
+                // char *name = field_buffer(fields[0], 0);
+                // char *pass = field_buffer(fields[1], 0);
 
-                int client_socket = create_client_socket(SERVER_IP, PORT);
-                login(client_socket, name, pass);
+                // int client_socket = create_client_socket(SERVER_IP, PORT);
+                // login(client_socket, name, pass);
                 
-                if(0){
-                    // TODO: Failed to login print red stuff
-                }
+                // if(0){
+                //     // TODO: Failed to login print red stuff
+                // }
 
                 curs_set(0);
 

@@ -16,6 +16,7 @@ void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry)
 int main(){
 
     int clientSocket = create_client_socket(SERVER_IP, PORT);
+    no_login(clientSocket);
 
     choice_loop:
     printf("Select an option:\n"
@@ -32,26 +33,31 @@ int main(){
 
     switch (choice)
     {
-    case 1:
+    case SEARCH_DB:
         send_signal(clientSocket, choiceStr);
         dataEntry testQuery = { "Mario" "" ""};
         sendDataEntry(clientSocket, &testQuery);
         receive_entries(clientSocket);
         break;
-    case 2:
+    case ADD_RECORD:
         send_signal(clientSocket, choiceStr);
         add_new_record(clientSocket);
         break;
-    case 3:
+    case REMOVE_RECORD:
         send_signal(clientSocket, choiceStr);
         delete_record(clientSocket);
         break;
-    case 4:
+    case EDIT_RECORD:
         send_signal(clientSocket, choiceStr);
         dataEntry entryToEdit = {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"};
         dataEntry editedEntry = {"Mario Draghi", "", ""};
         edit_record(clientSocket, entryToEdit, editedEntry);
         break;
+    // Login is handled when client is initialized
+    // case LOGIN:
+    //     printf("Login needs to be implemented: \n");
+    //     goto choice_loop;
+    //     break;    
     default:
         printf("Invalid option selected, try again: \n");
         goto choice_loop;

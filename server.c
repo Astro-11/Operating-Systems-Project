@@ -11,6 +11,7 @@
 #include "SocketUtilities.h"
 
 #define DEBUG 1
+#define ADMIN_PASSWORD "1234"
 
 void add_new_record_procedure(int clientSocket);
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
@@ -27,7 +28,7 @@ int matches(dataEntry entry, dataEntry filter);
 void print_all_entries();
 void send_entries(int clientSocket, dataEntry entries[], int entriesCount);
 void handle_sigint(int sig);
-
+void handle_admin_reset_signal(int sig);
 // #################################################################################
 // #################################################################################
 
@@ -38,22 +39,28 @@ void handle_sigint(int sig);
  */
 dataEntry *runtime_db; 
 int total_db_entries;
+int adminOnline = 0;
+pid_t mainServerPid;
 //NOTE A: naming convention for variables not respected!
 
 int main(){
+    mainServerPid = getpid();
 
     int serverSocket = create_server_socket(PORT);
 
     printf("Ctrl+C to terminate the server.\n\n");
 
     debug_populate_db(); //WARNING: OVERWRITES!
-    print_all_entries();
+    // print_all_entries();
     
     FILE * fp_database = open_db_read();
     //NOTE S: needs to be incremented when admin adds new entry
     int total_db_entries = countEntries(fp_database, DATAENTRY_LENGHT);
 
-    // NOTE S: Do we need to handle overflowing the array at
+    printf("Initial database has %d entries.\n", total_db_entries);
+    // NOTE S: Do we need to handle overflowing the array at runtime? 
+    // I think not, we already have more than enough space to accomodate a normal 
+    // growth and  more would represent a bug or malicious interference 
     int runtime_db_size = 256;
     while(runtime_db_size < total_db_entries*2){
         runtime_db_size *=2;
@@ -68,54 +75,89 @@ int main(){
     
     // Handles saving database when server is terminated 
     signal(SIGINT, handle_sigint);
+    signal(SIGUSR1, handle_admin_reset_signal);
 
     while(1){
         printf("Server is online listening for connection...\n");
         listen(serverSocket, 10);
         int clientSocket = accept_client_connection(serverSocket);
 
-        //NOTE S: Why was fork removed?
-        //NOTE A: Somebody didn't read my commits
-        //if (fork() == 0)
-        //{
+        // before forking whe check if the client requires admin privileges
+        int clientType;
+        receive_signal(clientSocket, &clientType);
+        if(clientType == 0){
+            char *submittedPassword;
+            receiveMsg(clientSocket, submittedPassword);
+
+            if (strcmp(submittedPassword, ADMIN_PASSWORD) != 0){
+                sendMsg(clientSocket, ACCESS_DENIED);
+                close(clientSocket);
+
+                printf("Someone attemted to login with wrong credentials.\nACCESS DENIED.\n");
+                continue;    
+            }
+            if (adminOnline == 1){
+                sendMsg(clientSocket, ACCESS_DENIED);
+                close(clientSocket);
+
+                printf("An admin attempted to log in while privileges are already in use.\nACCESS DENIED.\n");
+                continue;
+            }
+            
+            adminOnline = 1;
+            sendMsg(clientSocket, ACCESS_GRANTED);
+            printf("Admin access granted to a client.\n");
+            
+        }
+
+        int pid = fork();
+        if (pid == 0){
+            if(clientType == 1)
+                adminOnline = 0;
+
             printf("Connection enstablished, awaiting user request. \n\n");
+
+
             int choice;
             receive_signal(clientSocket, &choice);
 
-            switch (choice)
-            {
-            case 1:
-                printf("%d - Search database\n\n", choice);
-                search_record_procedure(clientSocket, runtime_db, total_db_entries);
-                printf("Search results succesfully sent to client\n");
-                break;
+            switch (choice) {
+                case SEARCH_DB:
+                    printf("%d - Search database\n\n", choice);
+                    search_record_procedure(clientSocket, runtime_db, total_db_entries);
+                    printf("Search results succesfully sent to client\n");
+                    break;
 
-            case 2:
-                printf("%d - Add new record\n\n", choice);
-                add_new_record_procedure(clientSocket);
-                printf("Record succesfully saved in db\n");
-                break;
+                case ADD_RECORD:
+                    printf("%d - Add new record\n\n", choice);
+                    add_new_record_procedure(clientSocket);
+                    printf("Record succesfully saved in db\n");
+                    break;
 
-            case 3:
-                printf("%d - Remove record\n\n", choice);
-                delete_record_procedure(clientSocket, runtime_db, total_db_entries);
-                break;
+                case REMOVE_RECORD:
+                    printf("%d - Remove record\n\n", choice);
+                    delete_record_procedure(clientSocket, runtime_db, total_db_entries);
+                    break;
 
-            case 4:
-                printf("%d - Edit record\n\n", choice);
-                edit_record_procedure(clientSocket, runtime_db, total_db_entries);
-                break;
-
-            default:
-                break;
-            }
-
-            printf("Closing connection.\n\n");
-        //}
-        //else close(clientSocket);
+                case EDIT_RECORD:
+                    printf("%d - Edit record\n\n", choice);
+                    edit_record_procedure(clientSocket, runtime_db, total_db_entries);
+                    break;
+                case LOGIN: // Login is no more needed here, it is handled 
+                    printf("%d - Login attempt\n\n", choice);
+                    edit_record_procedure(clientSocket, runtime_db, total_db_entries);
+                    break;
+                default:
+                    break; 
+                    }
+        } else {
+            printf("Closing connection with main server.\nCreated process %d to handle requests.\n\n", pid);
+            close(clientSocket);
+        }
     }
     
-    close(serverSocket);
+    // NOTE S: We never reach here right?
+    close(serverSocket); 
 
     return 0;
 }
@@ -193,11 +235,11 @@ void edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEn
     }
 
     if (strlen(editedEntry.name) > 0)
-    strcpy(entries[position].name, editedEntry.name);
+        strcpy(entries[position].name, editedEntry.name);
     if (strlen(editedEntry.address) > 0)
-    strcpy(entries[position].address, editedEntry.address);
+        strcpy(entries[position].address, editedEntry.address);
     if (strlen(editedEntry.phoneNumber) > 0)
-    strcpy(entries[position].phoneNumber, editedEntry.phoneNumber);
+        strcpy(entries[position].phoneNumber, editedEntry.phoneNumber);
 
     //For now only prints name after success
     printf("Edit was a success: new name %s\n", entries[position].name);
@@ -267,7 +309,7 @@ void add_new_record_procedure(int clientSocket) {
     dataEntry newDataEntry;
     receiveDataEntry(clientSocket, &newDataEntry);
 
-    printf("Received record: \nName: %sAddress: %sNumber: %s \n", 
+    printf("Received record: \nName: %s\nAddress: %s\nNumber: %s \n\n", 
         newDataEntry.name, 
         newDataEntry.address, 
         newDataEntry.phoneNumber);
@@ -327,24 +369,33 @@ void send_entries(int clientSocket, dataEntry entries[], int entriesCount) {
 
 int matches(dataEntry entry, dataEntry filter) {
     if (strlen(filter.name) > 0 && strstr(entry.name, filter.name) == NULL) {
-        printf("name mismatch\n");
+        // printf("name mismatch\n");
         return 0;
     }
     if (strlen(filter.address) > 0 && strstr(entry.address, filter.address) == NULL) {
-        printf("addr mismatch\n");
+        // printf("addr mismatch\n");
         return 0;
     }
     if (strlen(filter.phoneNumber) > 0 && strstr(entry.phoneNumber, filter.phoneNumber) == NULL) {
-        printf("phone\n");
+        // printf("phone\n");
         return 0;
     }
     return 1;
 }
 
 void handle_sigint(int sig) {
-    printf("Caught signal %d (Ctrl+C). Cleaning up...\n", sig);
+    printf("\n\nCaught signal %d (Ctrl+C). Cleaning up...\n", sig);
     printf("Saving runtime database to file...");
     
-    save_database_to_file(runtime_db, total_db_entries);
+    if (mainServerPid == getpid())
+        save_database_to_file(runtime_db, total_db_entries);
+    
+    if(mainServerPid != getppid())
+        kill(SIGUSR1, adminOnline);
     exit(0); 
+}
+
+void handle_admin_reset_signal(int sig){
+    if(adminOnline == 1)
+        adminOnline = 0;
 }

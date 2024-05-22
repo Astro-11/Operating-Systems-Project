@@ -101,9 +101,19 @@ int accept_client_connection(int server_socket) {
     return client_socket;
 }
 
-void login(int client_socket,char* user, char* password){
-    
-    sendMsg(client_socket, user);
+char* login(int client_socket, char* password){
+    char *clientType = ADMIN;
+    send_signal(client_socket, clientType);
+
     sendMsg(client_socket, password);
+
+    char *loginResponse;
+    receiveMsg(client_socket, loginResponse);
+    return loginResponse;
+
 }
 
+void no_login(int client_socket){
+    char *clientType = BASE;
+    send_signal(client_socket, clientType);
+}

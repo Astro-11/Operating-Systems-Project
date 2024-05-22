@@ -10,8 +10,9 @@
 int dbStatus = 0;
 
 void debug_populate_db() {
-    dataEntry database[30] = {
+    dataEntry debugDatabase[] = {
         {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"},
+        {"Mario Lezzi", "Via Roma 1, 00100 Roma", "+39 06 12345678"},
         {"Luigi Bianchi", "Piazza del Duomo 2, 50122 Firenze", "+39 055 1234567"},
         {"Giulia Verdi", "Via Garibaldi 3, 10121 Torino", "+39 011 1234567"},
         {"Francesca Neri", "Via Milano 4, 20121 Milano", "+39 02 1234567"},
@@ -43,10 +44,11 @@ void debug_populate_db() {
         {"Pietro Donati", "Via San Raffaele 30, 20121 Milano", "+39 02 5678901"}
     };
 
+    int arraySize = sizeof(debugDatabase)/sizeof(debugDatabase[0]);
     FILE * db = fopen(YELLOWPAGES_DB, "w+"); //WARNING: OVERWRITES!
 
-    for(int i = 0; i < 30; i++) {
-        save_entry(database[i], db);
+    for(int i = 0; i < arraySize; i++) {
+        save_entry(debugDatabase[i], db);
     }
 
     close_db(db);
