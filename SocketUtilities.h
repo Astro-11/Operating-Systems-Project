@@ -8,8 +8,8 @@
 #define SIGNAL_LENGTH 4
 #define MSG_LENGHT 256
 
-#define ADMIN "0"
-#define BASE "1"
+#define ADMIN 0
+#define BASE 1
 
 #define ACCESS_GRANTED "ACCESS_GRANTED"
 #define ACCESS_DENIED "ACCESS_DENIED"

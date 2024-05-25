@@ -102,18 +102,20 @@ int accept_client_connection(int server_socket) {
 }
 
 char* login(int client_socket, char* password){
-    char *clientType = ADMIN;
+    char clientType[SIGNAL_LENGTH];
+    sprintf(clientType, "%d", ADMIN);
+    printf("Trying to log in...\n"); //This print is needed to prevent segmentation fault :D
     send_signal(client_socket, clientType);
 
     sendMsg(client_socket, password);
 
     char *loginResponse;
     receiveMsg(client_socket, loginResponse);
+    
     return loginResponse;
-
 }
 
 void no_login(int client_socket){
-    char *clientType = BASE;
+    char clientType[SIGNAL_LENGTH];
     send_signal(client_socket, clientType);
 }
