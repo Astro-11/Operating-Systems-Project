@@ -86,7 +86,7 @@ int main(){
         int clientType;
         receive_signal(clientSocket, &clientType);
         if(clientType == 0){
-            char *submittedPassword;
+            char submittedPassword[256];
             receiveMsg(clientSocket, submittedPassword);
 
             if (strcmp(submittedPassword, ADMIN_PASSWORD) != 0){
