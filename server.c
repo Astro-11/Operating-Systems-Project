@@ -18,6 +18,7 @@ void add_new_record_procedure(int clientSocket);
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
+void logout_procedure();
 
 void add_new_record(int clientSocket, dataEntry newDataEntry);
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete);
@@ -95,7 +96,6 @@ int main(){
 
             printf("Connection enstablished, awaiting user request. \n\n");
 
-
             int choice;
             receive_signal(clientSocket, &choice);
             
@@ -121,14 +121,18 @@ int main(){
                     printf("%d - Edit record\n\n", choice);
                     edit_record_procedure(clientSocket, runtime_db, total_db_entries);
                     break;
-                case LOGIN: // Login is no more needed here, it is handled 
-                    printf("%d - Login attempt\n\n", choice);
-                    edit_record_procedure(clientSocket, runtime_db, total_db_entries);
+                case LOGOUT: 
+                    printf("%d - Logout attempt\n\n", choice);
+                    logout_procedure();
+                    close(clientSocket);
+                    exit(EXIT_SUCCESS);
                     break;
                 default:
                     break; 
-                    }
-        } else {
+                }
+        } 
+        else 
+        {
             printf("Closing connection with main server.\nCreated process %d to handle requests.\n\n", pid);
             close(clientSocket);
         }
@@ -394,35 +398,42 @@ int matches(dataEntry entry, dataEntry filter) {
 }
 
 void handle_sigint(int sig) {
-    printf("\n\nCaught signal %d (Ctrl+C). Cleaning up...\n", sig);
-    printf("Saving runtime database to file...");
+    printf("\n\nCaught signal %d (Ctrl+C). Cleaning up process %d...\n", sig, (int)(getpid()));
     
     //Note A: database should be saved only when closing admin server, not main server
     //if (mainServerPid == getpid())
     //    save_database_to_file(runtime_db, total_db_entries);
 
+    logout_procedure();
+
+    exit(0); 
+}
+
+void logout_procedure() {
     //If child server 
     if((mainServerPid != getpid())) {
         //If admin then save to db and inform main server of your demise
         if (adminOnline == 1) {
+            printf("Saving runtime database to file...\n");
             save_database_to_file(runtime_db, total_db_entries);
-            kill(SIGUSR1, mainServerPid);
+            kill(mainServerPid, SIGUSR1);
         }
         //If user then only inform main server of your demise
         else if (adminOnline == 0) {
-            kill(SIGUSR2, mainServerPid);
+            kill(mainServerPid, SIGUSR2);
         }
     }
 
-    exit(0); 
 }
 
 //For main server only
 void handle_admin_reset_signal(int sig){
     adminOnline = 0;
+    printf("There are now %d admins online\n", adminOnline);
 }
 
 //For main server only
 void handle_user_reset_signal(int sig) {
     usersOnline--;
+    printf("There are now %d users online\n", usersOnline);
 }

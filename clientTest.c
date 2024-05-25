@@ -14,8 +14,8 @@ void receive_entries(int clientSocket);
 void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry);
 
 int main(){
-
     int clientSocket = create_client_socket(SERVER_IP, PORT);
+    //no_login(clientSocket);
     login(clientSocket, "1234");
 
     choice_loop:
@@ -23,7 +23,8 @@ int main(){
             "1 - Search record\n"
             "2 - Add new record\n"
             "3 - Remove record\n"
-            "4 - Edit record\n");
+            "4 - Edit record\n"
+            "5 - Logout\n");
 
     char choiceStr[SIGNAL_LENGTH];
     fgets(choiceStr, SIGNAL_LENGTH, stdin);
@@ -53,20 +54,17 @@ int main(){
         dataEntry editedEntry = {"Mario Draghi", "", ""};
         edit_record(clientSocket, entryToEdit, editedEntry);
         break;
-    // Login is handled when client is initialized
-    // case LOGIN:
-    //     printf("Login needs to be implemented: \n");
-    //     goto choice_loop;
-    //     break;    
+    case LOGOUT:
+        send_signal(clientSocket, choiceStr);
+        close(clientSocket);
+        exit(EXIT_SUCCESS);
+        break;
     default:
         printf("Invalid option selected, try again: \n");
-        goto choice_loop;
         break;
     }
 
-    close(clientSocket);
-    
-    return 0;
+    goto choice_loop;
 }
 
 void add_new_record(int clientSocket) {

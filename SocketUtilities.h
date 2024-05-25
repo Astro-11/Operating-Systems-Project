@@ -19,7 +19,7 @@ typedef enum{
     ADD_RECORD,
     REMOVE_RECORD,
     EDIT_RECORD,
-    LOGIN,
+    LOGOUT,
 } serverRequest;
 
 
