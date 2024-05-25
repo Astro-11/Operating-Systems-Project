@@ -13,6 +13,7 @@
 #define DEBUG 1
 #define ADMIN_PASSWORD "1234"
 
+int login_procedure(int clientSocket);
 void add_new_record_procedure(int clientSocket);
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
@@ -29,6 +30,7 @@ void print_all_entries();
 void send_entries(int clientSocket, dataEntry entries[], int entriesCount);
 void handle_sigint(int sig);
 void handle_admin_reset_signal(int sig);
+void handle_user_reset_signal(int sig);
 // #################################################################################
 // #################################################################################
 
@@ -37,21 +39,24 @@ void handle_admin_reset_signal(int sig);
  * pass arguments to the function that handles SIGINT.
  *
  */
-dataEntry *runtime_db; 
-int total_db_entries;
-int adminOnline = 0;
-pid_t mainServerPid;
-//NOTE A: naming convention for variables not respected!
+static dataEntry *runtime_db; 
+static int total_db_entries;
+static volatile int adminOnline = 0;
+static volatile int usersOnline = 0;
+static pid_t mainServerPid;
 
 int main(){
-    mainServerPid = getpid();
+    // Handles saving database when server is terminated 
+    signal(SIGINT, handle_sigint);
+    signal(SIGUSR1, handle_admin_reset_signal);
+    signal(SIGUSR2, handle_user_reset_signal);
 
+    mainServerPid = getpid();
     int serverSocket = create_server_socket(PORT);
 
     printf("Ctrl+C to terminate the server.\n\n");
 
     debug_populate_db(); //WARNING: OVERWRITES!
-    // print_all_entries();
     
     FILE * fp_database = open_db_read();
     //NOTE S: needs to be incremented when admin adds new entry
@@ -72,43 +77,16 @@ int main(){
 
     readEntries(fp_database, runtime_db);
     close_db(fp_database);
-    
-    // Handles saving database when server is terminated 
-    signal(SIGINT, handle_sigint);
-    signal(SIGUSR1, handle_admin_reset_signal);
 
     while(1){
         printf("Main server is online listening for connection...\n");
         listen(serverSocket, 10);
         int clientSocket = accept_client_connection(serverSocket);
 
-        // before forking whe check if the client requires admin privileges
-        int clientType;
-        receive_signal(clientSocket, &clientType);
-        if(clientType == 0){
-            char submittedPassword[256];
-            receiveMsg(clientSocket, submittedPassword);
-
-            if (strcmp(submittedPassword, ADMIN_PASSWORD) != 0){
-                sendMsg(clientSocket, ACCESS_DENIED);
-                close(clientSocket);
-
-                printf("Someone attemted to login with wrong credentials.\nACCESS DENIED.\n");
-                continue;    
-            }
-            if (adminOnline == 1){
-                sendMsg(clientSocket, ACCESS_DENIED);
-                close(clientSocket);
-
-                printf("An admin attempted to log in while privileges are already in use.\nACCESS DENIED.\n");
-                continue;
-            }
-            
-            adminOnline = 1;
-            sendMsg(clientSocket, ACCESS_GRANTED);
-            printf("Admin access granted to a client.\n");
-            
-        }
+        int clientType = login_procedure(clientSocket);
+        if (clientType == -1) continue; 
+        else if (clientType == ADMIN) adminOnline = 1;
+        else if (clientType == BASE) usersOnline++;
 
         int pid = fork();
         if (pid == 0){
@@ -160,6 +138,38 @@ int main(){
     close(serverSocket); 
 
     return 0;
+}
+
+//Returns -1 if login failed, 0 if admin logged in, 1 if user logged in
+int login_procedure(int clientSocket) {
+    int clientType;
+    receive_signal(clientSocket, &clientType);
+    if(clientType == ADMIN) {
+        char submittedPassword[MSG_LENGHT];
+        receiveMsg(clientSocket, submittedPassword);
+
+        if (strcmp(submittedPassword, ADMIN_PASSWORD) != 0){
+            sendMsg(clientSocket, ACCESS_DENIED);
+            close(clientSocket);
+
+            printf("Someone attemted to login with wrong credentials.\nACCESS DENIED.\n");
+            return -1;
+        }
+        if (adminOnline == 1){
+            sendMsg(clientSocket, ACCESS_DENIED);
+            close(clientSocket);
+
+            printf("An admin attempted to log in while privileges are already in use.\nACCESS DENIED.\n");
+            return -1;
+        }
+        
+        sendMsg(clientSocket, ACCESS_GRANTED);
+        printf("Admin access granted to a client.\n");
+        return ADMIN;
+    }
+    else if (clientType == BASE) {
+        return BASE;
+    }
 }
 
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
@@ -387,15 +397,32 @@ void handle_sigint(int sig) {
     printf("\n\nCaught signal %d (Ctrl+C). Cleaning up...\n", sig);
     printf("Saving runtime database to file...");
     
-    if (mainServerPid == getpid())
-        save_database_to_file(runtime_db, total_db_entries);
-    
-    if(mainServerPid != getppid())
-        kill(SIGUSR1, adminOnline);
+    //Note A: database should be saved only when closing admin server, not main server
+    //if (mainServerPid == getpid())
+    //    save_database_to_file(runtime_db, total_db_entries);
+
+    //If child server 
+    if((mainServerPid != getpid())) {
+        //If admin then save to db and inform main server of your demise
+        if (adminOnline == 1) {
+            save_database_to_file(runtime_db, total_db_entries);
+            kill(SIGUSR1, mainServerPid);
+        }
+        //If user then only inform main server of your demise
+        else if (adminOnline == 0) {
+            kill(SIGUSR2, mainServerPid);
+        }
+    }
+
     exit(0); 
 }
 
+//For main server only
 void handle_admin_reset_signal(int sig){
-    if(adminOnline == 1)
-        adminOnline = 0;
+    adminOnline = 0;
+}
+
+//For main server only
+void handle_user_reset_signal(int sig) {
+    usersOnline--;
 }
