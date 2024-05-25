@@ -78,7 +78,7 @@ int main(){
     signal(SIGUSR1, handle_admin_reset_signal);
 
     while(1){
-        printf("Server is online listening for connection...\n");
+        printf("Main server is online listening for connection...\n");
         listen(serverSocket, 10);
         int clientSocket = accept_client_connection(serverSocket);
 
@@ -120,7 +120,7 @@ int main(){
 
             int choice;
             receive_signal(clientSocket, &choice);
-
+            
             switch (choice) {
                 case SEARCH_DB:
                     printf("%d - Search database\n\n", choice);

@@ -16,7 +16,7 @@ void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry)
 int main(){
 
     int clientSocket = create_client_socket(SERVER_IP, PORT);
-    no_login(clientSocket);
+    login(clientSocket, "1234");
 
     choice_loop:
     printf("Select an option:\n"
