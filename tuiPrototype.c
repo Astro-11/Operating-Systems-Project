@@ -252,7 +252,7 @@ int submitFormWindow() {
 
     curs_set(1);
     int clientSocket = create_client_socket(SERVER_IP, PORT);
-    char requestSearch = '1';
+    int requestSearch = 1;
     send_signal(clientSocket, &requestSearch);
     // Create a new window for the form
 
