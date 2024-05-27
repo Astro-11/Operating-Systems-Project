@@ -96,40 +96,43 @@ int main(){
 
             printf("Connection enstablished, awaiting user request. \n\n");
 
-            int choice;
-            receive_signal(clientSocket, &choice);
+            while(1) {
+
+                int choice;
+                receive_signal(clientSocket, &choice);
             
-            switch (choice) {
-                case SEARCH_DB:
-                    printf("%d - Search database\n\n", choice);
-                    search_record_procedure(clientSocket, runtime_db, total_db_entries);
-                    printf("Search results succesfully sent to client\n");
-                    break;
+                switch (choice) {
+                    case SEARCH_DB:
+                        printf("%d - Search database\n\n", choice);
+                        search_record_procedure(clientSocket, runtime_db, total_db_entries);
+                        printf("Search results succesfully sent to client\n");
+                        break;
 
-                case ADD_RECORD:
-                    printf("%d - Add new record\n\n", choice);
-                    add_new_record_procedure(clientSocket);
-                    printf("Record succesfully saved in db\n");
-                    break;
+                    case ADD_RECORD:
+                        printf("%d - Add new record\n\n", choice);
+                        add_new_record_procedure(clientSocket);
+                        printf("Record succesfully saved in db\n");
+                        break;
 
-                case REMOVE_RECORD:
-                    printf("%d - Remove record\n\n", choice);
-                    delete_record_procedure(clientSocket, runtime_db, total_db_entries);
-                    break;
+                    case REMOVE_RECORD:
+                        printf("%d - Remove record\n\n", choice);
+                        delete_record_procedure(clientSocket, runtime_db, total_db_entries);
+                        break;
 
-                case EDIT_RECORD:
-                    printf("%d - Edit record\n\n", choice);
-                    edit_record_procedure(clientSocket, runtime_db, total_db_entries);
-                    break;
-                case LOGOUT: 
-                    printf("%d - Logout attempt\n\n", choice);
-                    logout_procedure();
-                    close(clientSocket);
-                    exit(EXIT_SUCCESS);
-                    break;
-                default:
-                    break; 
+                    case EDIT_RECORD:
+                        printf("%d - Edit record\n\n", choice);
+                        edit_record_procedure(clientSocket, runtime_db, total_db_entries);
+                        break;
+                    case LOGOUT: 
+                        printf("%d - Logout attempt\n\n", choice);
+                        logout_procedure();
+                        close(clientSocket);
+                        exit(EXIT_SUCCESS);
+                        break;
+                    default:
+                        break; 
                 }
+            }
         } 
         else 
         {
@@ -183,9 +186,7 @@ void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     int outcome = delete_record(entries, entriesCount, entryToDelete);
 
     //Send outcome signal
-    char outcomeMsg[SIGNAL_LENGTH];
-    sprintf(outcomeMsg, "%d", outcome);
-    send_signal(clientSocket, outcomeMsg);
+    send_signal(clientSocket, &outcome);
 
     //Send possible failure message
     char failureMessage[MSG_LENGHT];
@@ -237,9 +238,7 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
 
 void edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
     int position = search_record_position(entries, entriesCount, entryToEdit);
-    char outcomeMsg[SIGNAL_LENGTH];
-    sprintf(outcomeMsg, "%d", position);
-    send_signal(clientSocket, outcomeMsg);
+    send_signal(clientSocket, &position);
 
     if (position < 0) {
         char errorMessage[MSG_LENGHT] = "Entry cannot be edited: no such entry in the database\n";
@@ -370,7 +369,7 @@ void send_entries(int clientSocket, dataEntry entries[], int entriesCount) {
     //Send to client the number of results
     char countMsg[SIGNAL_LENGTH];
     sprintf(countMsg, "%d", entriesCount);
-    send_signal(clientSocket, countMsg);
+    send_signal(clientSocket, &entriesCount);
 
     //Send to client the results
     int i = 0;
