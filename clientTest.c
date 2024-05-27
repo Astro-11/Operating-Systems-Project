@@ -9,6 +9,8 @@
 
 #include "SocketUtilities.h"
 
+static int clientSocket;
+static int busy = 0;
 static int logoutRequested = 0;
 
 void add_new_record(int clientSocket);
@@ -21,9 +23,11 @@ void handle_sigint(int sig);
 
 int main(){
     signal(SIGINT, handle_sigint);
-    int clientSocket = create_client_socket(SERVER_IP, PORT);
-    //no_login(clientSocket);
-    login(clientSocket, "1234");
+    clientSocket = create_client_socket(SERVER_IP, PORT);
+
+    char password[MSG_LENGHT] = "1234";
+    char response[MSG_LENGHT];
+    login(clientSocket, password, response);
 
     choice_loop:
     printf("Select an option:\n"
@@ -38,40 +42,46 @@ int main(){
     int choice;
     //sscanf(choiceStr, "%d", &choice);
     choice = (int)strtol(choiceStr, 0, 10);
+    busy = 1;
 
     switch (choice)
     {
     case SEARCH_DB:
-        send_signal(clientSocket, choiceStr);
+        send_signal(clientSocket, &choice);
         dataEntry testQuery = { "Mario" "" ""};
         sendDataEntry(clientSocket, &testQuery);
         receive_entries(clientSocket);
         if (logoutRequested) logout(clientSocket);
+        else busy = 0;
         break;
     case ADD_RECORD:
-        send_signal(clientSocket, choiceStr);
+        send_signal(clientSocket, &choice);
         add_new_record(clientSocket);
         if (logoutRequested) logout(clientSocket);
+        else busy = 0;
         break;
     case REMOVE_RECORD:
-        send_signal(clientSocket, choiceStr);
+        send_signal(clientSocket, &choice);
         delete_record(clientSocket);
         if (logoutRequested) logout(clientSocket);
         break;
     case EDIT_RECORD:
-        send_signal(clientSocket, choiceStr);
+        send_signal(clientSocket, &choice);
         dataEntry entryToEdit = {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"};
         dataEntry editedEntry = {"Mario Draghi", "", ""};
         edit_record(clientSocket, entryToEdit, editedEntry);
         if (logoutRequested) logout(clientSocket);
+        else busy = 0;
         break;
     case LOGOUT:
         logout(clientSocket);
         if (logoutRequested) logout(clientSocket);
+        else busy = 0;
         break;
     default:
         printf("Invalid option selected, try again: \n");
         if (logoutRequested) logout(clientSocket);
+        else busy = 0;
         break;
     }
 
@@ -131,13 +141,13 @@ void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry)
 void receive_entries(int clientSocket) {
 
     //Receive and parse the number of entries saved in the db
-     int entriesCount;
+    int entriesCount;
     receive_signal(clientSocket, &entriesCount);
     printf("There are %d entries:\n", entriesCount);
 
     //Receive as many entries as present
     int i = 0;
-    while (i < entriesCount) {
+    while (i < 2) {
         dataEntry receivedDataEntry;
         int received = receiveDataEntry(clientSocket, &receivedDataEntry);
         printf("Received %d bytes - ", received);
@@ -151,13 +161,13 @@ void receive_entries(int clientSocket) {
 }
 
 void logout(int clientSocket) {
-    char choiceStr[SIGNAL_LENGTH];
-    sprintf(choiceStr, "%d", LOGOUT);
-    send_signal(clientSocket, choiceStr);
+    int logout = LOGOUT;
+    send_signal(clientSocket, &logout);
     close(clientSocket);
     exit(EXIT_SUCCESS);
 }
 
 void handle_sigint(int sig) {
-    logoutRequested = 1;
+    if (busy) logoutRequested = 1;
+    else logout(clientSocket);
 }
