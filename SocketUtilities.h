@@ -24,7 +24,7 @@ typedef enum{
 
 
 int receive_signal(int socket, int * buffer);
-int send_signal(int socket, char * buffer);
+int send_signal(int socket, int * buffer);
 
 int receiveMsg(int socket, char * buffer);
 int sendMsg(int socket, char * buffer);
@@ -37,7 +37,7 @@ int create_client_socket(const char *server_ip, int port);
 int accept_client_connection(int server_socket);
 void handle_error(const char *msg);
 
-char* login(int client_socket, char* password);
+void login(int client_socket, char password[], char response[]);
 void no_login(int client_socket);
 
 #endif // SOCKET_UTILS_H

@@ -9,15 +9,19 @@
 #include <arpa/inet.h>
 
 int receive_signal(int socket, int * buffer) {
-    char signalStr[SIGNAL_LENGTH];
-    int returnValue = recv(socket, signalStr, SIGNAL_LENGTH, 0);
-    //sscanf(signalStr, "%d", buffer);
-    *buffer = (int)strtol(signalStr, 0, 10);
+    int signal = 0;
+    int returnValue = recv(socket, &signal, SIGNAL_LENGTH, 0);
+    signal = ntohl(signal);
+    //printf("Received %d, Signal content: %d, Signal address: %p\n", returnValue, signal, &signal);
+    *buffer = signal;
     return returnValue;
 }
 
-int send_signal(int socket, char * buffer) {
-    return send(socket, buffer, SIGNAL_LENGTH, 0);
+int send_signal(int socket, int * buffer) {
+    int signal = htonl(*buffer);
+    //printf("SignalTest: %d\n", signal);
+    //printf("Signal content: %d, Singnal address: %p\n", signal, &signal);
+    return send(socket, &signal, SIGNAL_LENGTH, 0);
 }
 
 int receiveMsg(int socket, char * buffer) {
@@ -101,21 +105,19 @@ int accept_client_connection(int server_socket) {
     return client_socket;
 }
 
-char* login(int client_socket, char* password){
-    char clientType[SIGNAL_LENGTH];
-    sprintf(clientType, "%d", ADMIN);
-    printf("Trying to log in...\n"); //This print is needed to prevent segmentation fault :D
-    send_signal(client_socket, clientType);
+void login(int client_socket, char password[], char response[]){
+    //sprintf(clientType, "%d", ADMIN);
+    //printf("Trying to log in...\n"); //This print is needed to prevent segmentation fault :D
+    //send_signal(client_socket, clientType);
+    int admin = ADMIN;
+    send_signal(client_socket, &admin);
 
     sendMsg(client_socket, password);
 
-    char *loginResponse;
-    receiveMsg(client_socket, loginResponse);
-    
-    return loginResponse;
+    receiveMsg(client_socket, response);
 }
 
 void no_login(int client_socket){
-    char clientType[SIGNAL_LENGTH];
-    send_signal(client_socket, clientType);
+    int base = BASE;
+    send_signal(client_socket, &base);
 }
