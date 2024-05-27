@@ -1,7 +1,7 @@
 TODO:
 - [ ] Completare il TODO con tutte le necessità ed obbiettivi
 - [ ] Expand the documentation with expected use case of procedures and parameters.
-- [ ] Make enums to clearly label server modes options
+- [X] Make enums to clearly label server modes options
 - [ ] Salvataggio DB su disco...
     - [ ] ...quando si chiude un client loggato con exit.
     - [x] ...quando viene terminato il server con ctrl+C.
@@ -14,8 +14,12 @@ TODO:
 - [ ] Update clients' internal entries to mantain database consistency after superuser commits changes to db
 - [ ] Login and logout
     - [ ] Implement server-side login authentification 
-    - [ ] Add logout options for clients to close application
-    - [ ] Add SIGINT handling for client: it should inform the server of its premature demise
+    - [X] Add logout options for clients to close application
+    - [X] Add SIGINT handling for client: it should inform the server of its premature demise
+        - [ ] A new socket connection to the server might be needed just for killing child servers if stuck in procedures
+- [ ] Inter Process Communication inside of server
+    - [ ] Admin server should inform main server of new changes to the db and main server should inform user servers
+    - [ ] User servers and admin server should have their own control groups for signals, main server will keep a reference to the two control groups
 
 
 QUESTIONS:

@@ -5,15 +5,22 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include "SocketUtilities.h"
+
+static int logoutRequested = 0;
 
 void add_new_record(int clientSocket);
 void delete_record(int clientSocket);
 void receive_entries(int clientSocket);
 void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry);
+void logout(int clientSocket);
+
+void handle_sigint(int sig);
 
 int main(){
+    signal(SIGINT, handle_sigint);
     int clientSocket = create_client_socket(SERVER_IP, PORT);
     //no_login(clientSocket);
     login(clientSocket, "1234");
@@ -39,28 +46,32 @@ int main(){
         dataEntry testQuery = { "Mario" "" ""};
         sendDataEntry(clientSocket, &testQuery);
         receive_entries(clientSocket);
+        if (logoutRequested) logout(clientSocket);
         break;
     case ADD_RECORD:
         send_signal(clientSocket, choiceStr);
         add_new_record(clientSocket);
+        if (logoutRequested) logout(clientSocket);
         break;
     case REMOVE_RECORD:
         send_signal(clientSocket, choiceStr);
         delete_record(clientSocket);
+        if (logoutRequested) logout(clientSocket);
         break;
     case EDIT_RECORD:
         send_signal(clientSocket, choiceStr);
         dataEntry entryToEdit = {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"};
         dataEntry editedEntry = {"Mario Draghi", "", ""};
         edit_record(clientSocket, entryToEdit, editedEntry);
+        if (logoutRequested) logout(clientSocket);
         break;
     case LOGOUT:
-        send_signal(clientSocket, choiceStr);
-        close(clientSocket);
-        exit(EXIT_SUCCESS);
+        logout(clientSocket);
+        if (logoutRequested) logout(clientSocket);
         break;
     default:
         printf("Invalid option selected, try again: \n");
+        if (logoutRequested) logout(clientSocket);
         break;
     }
 
@@ -137,4 +148,16 @@ void receive_entries(int clientSocket) {
         
         i++;
     }
+}
+
+void logout(int clientSocket) {
+    char choiceStr[SIGNAL_LENGTH];
+    sprintf(choiceStr, "%d", LOGOUT);
+    send_signal(clientSocket, choiceStr);
+    close(clientSocket);
+    exit(EXIT_SUCCESS);
+}
+
+void handle_sigint(int sig) {
+    logoutRequested = 1;
 }
