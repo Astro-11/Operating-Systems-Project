@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 int receive_signal(int socket, int * buffer) {
     int signal = 0;
@@ -120,4 +121,27 @@ void login(int client_socket, char password[], char response[]){
 void no_login(int client_socket){
     int base = BASE;
     send_signal(client_socket, &base);
+}
+
+
+
+
+int check_socket(int socket) {
+    // int result = send(socket, NULL, 0, MSG_NOSIGNAL);
+    // // Connection is closed
+    // if (result == -1 && errno == EPIPE)
+    //         return 1;
+
+    // return 0;
+    int result = send(socket, NULL, 0, MSG_NOSIGNAL);
+
+    if (result == -1) {
+        // An error occurred, check the errno
+        if (errno == EPIPE || errno == ECONNRESET) {
+            // Connection is closed
+            return 1;
+        }
+    }
+    // If result is 0 or positive, connection is open
+    return 0;
 }

@@ -40,4 +40,6 @@ void handle_error(const char *msg);
 void login(int client_socket, char password[], char response[]);
 void no_login(int client_socket);
 
+int check_socket(int socket); 
+
 #endif // SOCKET_UTILS_H

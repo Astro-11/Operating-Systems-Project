@@ -32,6 +32,9 @@ int readEntries(FILE *filePointer, dataEntry dataEntries[]);
 
 int remove_all_whitespace(char str[]);
 
+int check_name(char name[]);
+int check_phone_number(char phoneNumber[]); 
+
 int validate_entry(dataEntry entry);
 
 char* rtrim(char *str);

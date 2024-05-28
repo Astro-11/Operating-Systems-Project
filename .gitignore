@@ -15,4 +15,6 @@ commitNotes.md
 junk.c
 clientTest
 YellowPage.data
+scrapClient*
+scrapServer*
 filteredEntryees.anActualReadableTxtFileAndNotRandomBytes

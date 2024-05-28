@@ -177,22 +177,53 @@ int remove_all_whitespace(char str[]) {
     return len;
 }
 
+int check_name(char name[]) {
+    int count = 0;
+    char c;
+    int i = 0;
+    while ((c = name[i++]) != '\0') 
+        if (!isalpha(c)){
+            if ( c != ' ') return 0; 
+        } else
+            count++;
+    
+    return count;
+}
+
+int check_phone_number(char phoneNumber[]) {
+    int count = 0;
+    char c;
+    int i = 0;
+    while ((c = phoneNumber[i++]) != '\0') 
+        if (!isdigit(c)){
+            if ( c != ' ') return 0; 
+        } else
+            count++;
+    
+    return count;
+}
+// TODO Sanitize entry
+
 //Return 0 if entry is valid, negative otherwise
 int validate_entry(dataEntry entry) {
-    //char buffer[256] = "A n\ndr  ea";
-    //char buffer[256] = "   \n ";
     char buffer[256];
+
     strcpy(buffer, entry.name);
     remove_all_whitespace(buffer);
-    if (strlen(buffer) <= 0) return -1;
+    if (check_name(buffer) <= 0) return -1;
+    
     strcpy(buffer, entry.address);
     remove_all_whitespace(buffer);
     if (strlen(buffer) <= 0) return -2;
+    
     strcpy(buffer, entry.phoneNumber);
     remove_all_whitespace(buffer);
-    if (strlen(buffer) <= 0) return -3;
+    if (check_phone_number(buffer) <= 0) return -3;
+    
     return 0;
 }
+
+
 
 char* rtrim(char *str) {
     int len = strlen(str);

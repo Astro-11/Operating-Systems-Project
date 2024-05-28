@@ -91,7 +91,7 @@ int main(){
 
         int pid = fork();
         if (pid == 0){
-            if(clientType == 1)
+            if(clientType == BASE)
                 adminOnline = 0;
 
             printf("Connection enstablished, awaiting user request. \n\n");
@@ -112,11 +112,13 @@ int main(){
                         printf("%d - Add new record\n\n", choice);
                         add_new_record_procedure(clientSocket);
                         printf("Record succesfully saved in db\n");
+                        printf("total_db_entries: %d\n",total_db_entries);
                         break;
 
                     case REMOVE_RECORD:
                         printf("%d - Remove record\n\n", choice);
                         delete_record_procedure(clientSocket, runtime_db, total_db_entries);
+                        printf("total_db_entries: %d\n",total_db_entries);
                         break;
 
                     case EDIT_RECORD:
@@ -410,7 +412,7 @@ void handle_sigint(int sig) {
 
 void logout_procedure() {
     //If child server 
-    if((mainServerPid != getpid())) {
+    if(mainServerPid != getpid()) {
         //If admin then save to db and inform main server of your demise
         if (adminOnline == 1) {
             printf("Saving runtime database to file...\n");
