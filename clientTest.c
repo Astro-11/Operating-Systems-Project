@@ -28,6 +28,7 @@ int main(){
     char password[MSG_LENGHT] = "1234";
     char response[MSG_LENGHT];
     login(clientSocket, password, response);
+    //no_login(clientSocket);
 
     choice_loop:
     printf("Select an option:\n"
@@ -67,7 +68,7 @@ int main(){
         break;
     case EDIT_RECORD:
         send_signal(clientSocket, &choice);
-        dataEntry entryToEdit = {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"};
+        dataEntry entryToEdit = {"Mario Rossi", "Via Roma 1, 00100 Roma", "06 12345678"};
         dataEntry editedEntry = {"Mario Draghi", "", ""};
         edit_record(clientSocket, entryToEdit, editedEntry);
         if (logoutRequested) logout(clientSocket);
@@ -147,7 +148,7 @@ void receive_entries(int clientSocket) {
 
     //Receive as many entries as present
     int i = 0;
-    while (i < 2) {
+    while (i < entriesCount) {
         dataEntry receivedDataEntry;
         int received = receiveDataEntry(clientSocket, &receivedDataEntry);
         printf("Received %d bytes - ", received);
