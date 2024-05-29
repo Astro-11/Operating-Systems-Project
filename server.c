@@ -13,6 +13,9 @@
 #define DEBUG 1
 #define ADMIN_PASSWORD "1234"
 
+void admin_loop(int clientSocket);
+void user_loop(int clientSocket);
+
 int login_procedure(int clientSocket);
 void add_new_record_procedure(int clientSocket);
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
@@ -29,6 +32,7 @@ int search_record_position(dataEntry entries[], int entriesCount, dataEntry quer
 int matches(dataEntry entry, dataEntry filter);
 void print_all_entries();
 void send_entries(int clientSocket, dataEntry entries[], int entriesCount);
+void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount);
 void handle_sigint(int sig);
 void handle_admin_reset_signal(int sig);
 void handle_user_reset_signal(int sig);
@@ -40,11 +44,13 @@ void handle_user_reset_signal(int sig);
  * pass arguments to the function that handles SIGINT.
  *
  */
-static dataEntry *runtime_db; 
-static int total_db_entries;
+static dataEntry *runtimeDatabase; 
+static int runtimeEntriesCount;
+static int outdatedRuntimeDb = 0;
 static volatile int adminOnline = 0;
 static volatile int usersOnline = 0;
-static pid_t mainServerPid;
+static pid_t mainServerPid = 0;
+static pid_t userServersGroupPid = 0;
 
 int main(){
     // Handles saving database when server is terminated 
@@ -55,30 +61,13 @@ int main(){
     mainServerPid = getpid();
     int serverSocket = create_server_socket(PORT);
 
-    printf("Ctrl+C to terminate the server.\n\n");
-
     debug_populate_db(); //WARNING: OVERWRITES!
+    //runtimeEntriesCount needs to be incremented when admin adds new entry
+    update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
+    printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
+
+    printf("Ctrl+C to terminate the server %d.\n\n", (int)(getpid()));
     
-    FILE * fp_database = open_db_read();
-    //NOTE S: needs to be incremented when admin adds new entry
-    int total_db_entries = countEntries(fp_database, DATAENTRY_LENGHT);
-
-    printf("Initial database has %d entries.\n", total_db_entries);
-    // NOTE S: Do we need to handle overflowing the array at runtime? 
-    // I think not, we already have more than enough space to accomodate a normal 
-    // growth and  more would represent a bug or malicious interference 
-    int runtime_db_size = 256;
-    while(runtime_db_size < total_db_entries*2){
-        runtime_db_size *=2;
-    }
-
-    //NOTE S: if database data is lost it may need the static prefix
-    dataEntry placeholder[runtime_db_size];
-    runtime_db = placeholder;
-
-    readEntries(fp_database, runtime_db);
-    close_db(fp_database);
-
     while(1){
         printf("Main server is online listening for connection...\n");
         listen(serverSocket, 10);
@@ -89,56 +78,31 @@ int main(){
         else if (clientType == ADMIN) adminOnline = 1;
         else if (clientType == BASE) usersOnline++;
 
+        if (outdatedRuntimeDb == 1) {
+            update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
+            outdatedRuntimeDb = 0;
+        }
+
         int pid = fork();
         if (pid == 0){
-            if(clientType == BASE)
+             printf("Connection enstablished, awaiting user request. \n\n");
+
+            if(clientType == BASE) {
                 adminOnline = 0;
-
-            printf("Connection enstablished, awaiting user request. \n\n");
-
-            while(1) {
-
-                int choice;
-                receive_signal(clientSocket, &choice);
-            
-                switch (choice) {
-                    case SEARCH_DB:
-                        printf("%d - Search database\n\n", choice);
-                        search_record_procedure(clientSocket, runtime_db, total_db_entries);
-                        printf("Search results succesfully sent to client\n");
-                        break;
-
-                    case ADD_RECORD:
-                        printf("%d - Add new record\n\n", choice);
-                        add_new_record_procedure(clientSocket);
-                        printf("Record succesfully saved in db\n");
-                        printf("total_db_entries: %d\n",total_db_entries);
-                        break;
-
-                    case REMOVE_RECORD:
-                        printf("%d - Remove record\n\n", choice);
-                        delete_record_procedure(clientSocket, runtime_db, total_db_entries);
-                        printf("total_db_entries: %d\n",total_db_entries);
-                        break;
-
-                    case EDIT_RECORD:
-                        printf("%d - Edit record\n\n", choice);
-                        edit_record_procedure(clientSocket, runtime_db, total_db_entries);
-                        break;
-                    case LOGOUT: 
-                        printf("%d - Logout attempt\n\n", choice);
-                        logout_procedure();
-                        close(clientSocket);
-                        exit(EXIT_SUCCESS);
-                        break;
-                    default:
-                        break; 
-                }
+                //If userServersGroup not initialized give it the pid of the first user server
+                if (userServersGroupPid == 0) userServersGroupPid = getpid(); 
+                setpgid(getpid(), userServersGroupPid);
+                user_loop(clientSocket);
+            }
+            else if (clientType == ADMIN) {
+                admin_loop(clientSocket);
             }
         } 
         else 
         {
             printf("Closing connection with main server.\nCreated process %d to handle requests.\n\n", pid);
+            //If userServersGroup not initialized give it the pid of the first user server
+            if (userServersGroupPid == 0) userServersGroupPid = pid;
             close(clientSocket);
         }
     }
@@ -147,6 +111,83 @@ int main(){
     close(serverSocket); 
 
     return 0;
+}
+
+void admin_loop(int clientSocket) {
+
+    while(1) {
+
+        int choice;
+        receive_signal(clientSocket, &choice);
+
+        switch (choice) {
+            case SEARCH_DB:
+                printf("%d - Search database\n\n", choice);
+                search_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
+                printf("Search results succesfully sent to client\n");
+                break;
+
+            case ADD_RECORD:
+                printf("%d - Add new record\n\n", choice);
+                add_new_record_procedure(clientSocket);
+                runtimeEntriesCount++;
+                printf("Record succesfully saved in db\n");
+                printf("runtimeEntriesCount: %d\n",runtimeEntriesCount);
+                break;
+
+            case REMOVE_RECORD:
+                printf("%d - Remove record\n\n", choice);
+                delete_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
+                printf("runtimeEntriesCount: %d\n",runtimeEntriesCount);
+                break;
+
+            case EDIT_RECORD:
+                printf("%d - Edit record\n\n", choice);
+                edit_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
+                break;
+
+            case LOGOUT: 
+                printf("%d - Logout attempt\n\n", choice);
+                logout_procedure();
+                close(clientSocket);
+                exit(EXIT_SUCCESS);
+                break;
+
+            default:
+                break; 
+        }
+    }
+}
+
+void user_loop(int clientSocket) {
+
+    while(1) {
+
+        int choice;
+        receive_signal(clientSocket, &choice);
+        if (outdatedRuntimeDb == 1) {
+            update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
+            outdatedRuntimeDb = 0;
+        }
+            
+        switch (choice) {
+            case SEARCH_DB:
+                printf("%d - Search database\n\n", choice);
+                search_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
+                printf("Search results succesfully sent to client\n");
+                break;
+
+            case LOGOUT: 
+                printf("%d - Logout attempt\n\n", choice);
+                logout_procedure();
+                close(clientSocket);
+                exit(EXIT_SUCCESS);
+                break;
+                
+            default:
+                break; 
+        }
+    }
 }
 
 //Returns -1 if login failed, 0 if admin logged in, 1 if user logged in
@@ -398,43 +439,79 @@ int matches(dataEntry entry, dataEntry filter) {
     return 1;
 }
 
+void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount) {
+    FILE * databasePointer = open_db_read();
+    *newRuntimeEntriesCount = countEntries(databasePointer, DATAENTRY_LENGHT);
+
+    //NOTE A: for now we do not handle runtime overflow
+    //However, it might be worth looking into dynamic data structures for the runtime db
+    int runtimeDatabaseSize = 256;
+    while(runtimeDatabaseSize < runtimeEntriesCount * 2){
+        runtimeDatabaseSize *= 2;
+    }
+
+    dataEntry placeholder[runtimeDatabaseSize];
+    runtimeDatabase = placeholder;
+
+    readEntries(databasePointer, runtimeDatabase);
+    close_db(databasePointer);
+}
+
+//For all servers
 void handle_sigint(int sig) {
     printf("\n\nCaught signal %d (Ctrl+C). Cleaning up process %d...\n", sig, (int)(getpid()));
     
-    //Note A: database should be saved only when closing admin server, not main server
-    //if (mainServerPid == getpid())
-    //    save_database_to_file(runtime_db, total_db_entries);
+    //If Main Server kill all User Servers first, then die
+    if (mainServerPid == getpid()) {
+        printf("Sending SIGINT signal to user server group %d\n", (int)(userServersGroupPid));
+        if (userServersGroupPid != 0) kill(userServersGroupPid, SIGINT);
+    }
+    //If Admin Server save db first, then die
+    else if (adminOnline == 1) {
+        save_database_to_file(runtimeDatabase, runtimeEntriesCount);
+    }
 
-    logout_procedure();
-
-    exit(0); 
+    exit(EXIT_FAILURE); 
 }
 
+//For User Server and Admin Server
 void logout_procedure() {
     //If child server 
     if(mainServerPid != getpid()) {
         //If admin then save to db and inform main server of your demise
         if (adminOnline == 1) {
             printf("Saving runtime database to file...\n");
-            save_database_to_file(runtime_db, total_db_entries);
+            save_database_to_file(runtimeDatabase, runtimeEntriesCount);
             kill(mainServerPid, SIGUSR1);
+            exit(EXIT_SUCCESS);
         }
         //If user then only inform main server of your demise
         else if (adminOnline == 0) {
             kill(mainServerPid, SIGUSR2);
+            exit(EXIT_SUCCESS);
         }
     }
-
 }
 
-//For main server only
+//For main server and child user servers
 void handle_admin_reset_signal(int sig){
-    adminOnline = 0;
-    printf("There are now %d admins online\n", adminOnline);
+    //If main server reset admin counter and tell child user servers to update db
+    if (mainServerPid == getpid()) {
+        adminOnline = 0;
+        outdatedRuntimeDb = 1;
+        if (userServersGroupPid != 0) kill(userServersGroupPid, SIGUSR1);
+        printf("There are now %d admins online\n", adminOnline);
+    }
+    //If child user server update db in next loop
+    else {
+        outdatedRuntimeDb = 1;
+        printf("Process %d will updated its database\n", (int)(getpid()));
+    }
 }
 
 //For main server only
 void handle_user_reset_signal(int sig) {
     usersOnline--;
+    if (usersOnline == 0) userServersGroupPid = 0; //Reset control group if no more users online
     printf("There are now %d users online\n", usersOnline);
 }
