@@ -17,20 +17,20 @@ void admin_loop(int clientSocket);
 void user_loop(int clientSocket);
 
 int login_procedure(int clientSocket);
-void add_new_record_procedure(int clientSocket);
+void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entriesCount);
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void logout_procedure();
 
-void add_new_record(int clientSocket, dataEntry newDataEntry);
+int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEntry);
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete);
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]);
-int edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry);
+int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry);
 
 int search_record_position(dataEntry entries[], int entriesCount, dataEntry query);
 int matches(dataEntry entry, dataEntry filter);
-void print_all_entries();
+void print_all_entries(dataEntry entries[], int entriesCount);
 void send_entries(int clientSocket, dataEntry entries[], int entriesCount);
 void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount);
 void handle_sigint(int sig);
@@ -64,7 +64,7 @@ int main(){
     //runtimeEntriesCount needs to be incremented when admin adds new entry
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
     printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
-    print_all_entries();
+    print_all_entries(runtimeDatabase, runtimeEntriesCount);
 
     printf("Ctrl+C to terminate the server %d.\n\n", (int)(getpid()));
     
@@ -129,9 +129,7 @@ void admin_loop(int clientSocket) {
 
             case ADD_RECORD:
                 printf("%d - Add new record\n\n", choice);
-                add_new_record_procedure(clientSocket);
-                runtimeEntriesCount++;
-                printf("Record succesfully saved in db\n");
+                add_new_record_procedure(clientSocket, runtimeDatabase, &runtimeEntriesCount);
                 printf("runtimeEntriesCount: %d\n",runtimeEntriesCount);
                 break;
 
@@ -279,23 +277,23 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
     dataEntry editedEntry;
     receiveDataEntry(clientSocket, &editedEntry);
 
-    int outcome = edit_record(clientSocket, entries, entriesCount, entryToEdit, editedEntry);
+    int outcome = edit_record(entries, entriesCount, entryToEdit, editedEntry);
     send_signal(clientSocket, &outcome);
-    
+
     if (outcome == -1) {
         char errorMessage[MSG_LENGHT] = "Entry cannot be edited: no such entry in the database\n";
-        printf("Outcome %d - failed to edit record: %s", outcome, errorMessage);
+        printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
         sendMsg(clientSocket, errorMessage);
     }
     else if (outcome == -2) {
         char errorMessage[MSG_LENGHT] = "Entry cannot be edited: invalid modifications\n";
-        printf("Outcome %d - failed to edit record: %s", outcome, errorMessage);
+        printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
         sendMsg(clientSocket, errorMessage);
     }
 }
 
 //Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
-int edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
+int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
     //Check if entryToEdit is valid and sanitize it
     if (validate_entry(entryToEdit) < 0) return -1;
     sanitize_entry(&entryToEdit);
@@ -387,7 +385,7 @@ int search_record_position(dataEntry entries[], int entriesCount, dataEntry quer
 }
 
 
-void add_new_record_procedure(int clientSocket) {
+void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entriesCount) {
     dataEntry newDataEntry;
     receiveDataEntry(clientSocket, &newDataEntry);
 
@@ -396,40 +394,43 @@ void add_new_record_procedure(int clientSocket) {
         newDataEntry.address, 
         newDataEntry.phoneNumber);
 
-    add_new_record(clientSocket, newDataEntry);
+    int outcome = add_new_record(entries, entriesCount, newDataEntry);
+    send_signal(clientSocket, &outcome);
+
+    if (outcome == -1) {
+        char errorMessage[MSG_LENGHT] = "Entry cannot be added: invalid entry\n";
+        printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
+        sendMsg(clientSocket, errorMessage);
+    }
+    else if (outcome == -2) {
+        char errorMessage[MSG_LENGHT] = "Entry cannot be added: entry already present in the database\n";
+        printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
+        sendMsg(clientSocket, errorMessage);
+    }
+    else printf("Record succesfully added, database now has %d entries\n", outcome);
 }
 
-void add_new_record(int clientSocket, dataEntry newDataEntry) {
-    FILE * db = open_db_write();
-    fseek(db, 0, SEEK_END);
-    save_entry(newDataEntry, db);
+//Returns the new entriesCount if succesful, -1 if newDataEntry is invalid, -2 if newDataEntry is already present in the db
+int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEntry) {
+    //NOTE A: At the moment we are validating and sanitizing every entry both when adding it to the runtimeDb and the actual db. 
+    //        Should we do it only once?
+    if (validate_entry(newDataEntry) < 0) return -1;
+    sanitize_entry(&newDataEntry);
+    if (search_record_position(entries, *entriesCount, newDataEntry) >= 0) return -2;
 
-    #if DEBUG
-    //Checks if record was actually written
-    fseek(db, -DATAENTRY_LENGHT, SEEK_CUR);
-    dataEntry readNewEntry;
-    readEntry(db, &readNewEntry);
-    printf("Saved record: \nName: %sAddress: %sNumber: %s \n", 
-        readNewEntry.name, 
-        readNewEntry.address, 
-        readNewEntry.phoneNumber);
-    #endif
-
-    close_db(db);
+    entries[*entriesCount] = newDataEntry;
+    *entriesCount = *entriesCount + 1;
+    print_all_entries(entries, *entriesCount);
+    return *entriesCount;
 }
 
-void print_all_entries() {
-    FILE * db = open_db_read();
-    int entriesCount = countEntries(db, sizeof(dataEntry));
-    dataEntry dataEntries[entriesCount];
-    if (entriesCount != readEntries(db, dataEntries)) printf("An error has occured while reading entries from file");
-
+void print_all_entries(dataEntry entries[], int entriesCount) {
     int i = 0;
     while (i < entriesCount) {
         printf("\nNome: %s \nIndirizzo: %s \nNumero: %s \n", 
-            dataEntries[i].name, 
-            dataEntries[i].address, 
-            dataEntries[i].phoneNumber);
+            entries[i].name, 
+            entries[i].address, 
+            entries[i].phoneNumber);
         i++;
     }
 }

@@ -105,7 +105,18 @@ void add_new_record(int clientSocket) {
     strcpy(newDataEntry.name, name);
     strcpy(newDataEntry.address, address);
     strcpy(newDataEntry.phoneNumber, phoneNumber);
+    //Entry validation works if input is inserted by code but not if inserted through terminal
+    //dataEntry newDataEntry = { "Mario Peppe", "Viale Roma 2", "1112223334"};
     sendDataEntry(clientSocket, &newDataEntry);
+
+    int outcome;
+    receive_signal(clientSocket, &outcome);
+    if (outcome < 0) {
+        char failureMsg[MSG_LENGHT];
+        receiveMsg(clientSocket, failureMsg);
+        printf("Request failed: %s\n", failureMsg);
+    }
+    else (printf("Entry succesfully added\n"));
 }
 
 void delete_record(int clientSocket) {

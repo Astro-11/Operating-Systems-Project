@@ -30,6 +30,7 @@ QUESTIONS:
     - We need to test the behaviour of our code in this cases 
 - [ ] Do we need/want to handle overfilling the array at runtime?
 - [ ] Should we rename the "dataEntry" struct to "record"? It seems to me like you find the term confusing for things like entries[].
+- [ ] At the moment we are validating and sanitizing every entry both when adding it to the runtimeDb and the actual db. Should we do it only once?
 
 
 ---
