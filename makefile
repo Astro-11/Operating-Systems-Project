@@ -12,8 +12,8 @@ DatabaseHandler.o: DatabaseHandler.c DatabaseHandler.h
 SocketUtilities.o: SocketUtilities.c SocketUtilities.h DatabaseHandler.h
 	gcc -c SocketUtilities.c 
 
-clientTest: clientTest.o SocketUtilities.o
-	gcc clientTest.c SocketUtilities.o -o clientTest
+clientTest: clientTest.o SocketUtilities.o DatabaseHandler.o
+	gcc clientTest.c SocketUtilities.o DatabaseHandler.o -o clientTest
 
 clientTest.o: clientTest.c SocketUtilities.h
 	gcc -c clientTest.c

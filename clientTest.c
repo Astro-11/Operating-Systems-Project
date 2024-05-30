@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#include "DatabaseHandler.h"
 #include "SocketUtilities.h"
 
 static int clientSocket;
@@ -100,11 +101,14 @@ void add_new_record(int clientSocket) {
     fgets(address, MSG_LENGHT, stdin);
     printf("Number: ");
     fgets(phoneNumber, MSG_LENGHT, stdin);
+    // printf("Received name: %s\n", name);
+    // printf("Received addr: %s\n", address);
+    // printf("Received phon: %s\n", phoneNumber);
 
     dataEntry newDataEntry;
-    strcpy(newDataEntry.name, name);
-    strcpy(newDataEntry.address, address);
-    strcpy(newDataEntry.phoneNumber, phoneNumber);
+    strcpy(newDataEntry.name, rtrim(name));
+    strcpy(newDataEntry.address, rtrim(address));
+    strcpy(newDataEntry.phoneNumber, rtrim(phoneNumber));
     //Entry validation works if input is inserted by code but not if inserted through terminal
     //dataEntry newDataEntry = { "Mario Peppe", "Viale Roma 2", "1112223334"};
     sendDataEntry(clientSocket, &newDataEntry);
