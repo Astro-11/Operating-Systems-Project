@@ -26,7 +26,7 @@ void logout_procedure();
 void add_new_record(int clientSocket, dataEntry newDataEntry);
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete);
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]);
-void edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry);
+int edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry);
 
 int search_record_position(dataEntry entries[], int entriesCount, dataEntry query);
 int matches(dataEntry entry, dataEntry filter);
@@ -34,15 +34,14 @@ void print_all_entries();
 void send_entries(int clientSocket, dataEntry entries[], int entriesCount);
 void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount);
 void handle_sigint(int sig);
-void handle_admin_reset_signal(int sig);
-void handle_user_reset_signal(int sig);
+void handle_admin_death_signal(int sig);
+void handle_user_death_signal(int sig);
 // #################################################################################
 // #################################################################################
 
 /* 
  * This global variables are needed because it's not possible to 
  * pass arguments to the function that handles SIGINT.
- *
  */
 static dataEntry *runtimeDatabase; 
 static int runtimeEntriesCount;
@@ -55,8 +54,8 @@ static pid_t userServersGroupPid = 0;
 int main(){
     // Handles saving database when server is terminated 
     signal(SIGINT, handle_sigint);
-    signal(SIGUSR1, handle_admin_reset_signal);
-    signal(SIGUSR2, handle_user_reset_signal);
+    signal(SIGUSR1, handle_admin_death_signal);
+    signal(SIGUSR2, handle_user_death_signal);
 
     mainServerPid = getpid();
     int serverSocket = create_server_socket(PORT);
@@ -65,6 +64,7 @@ int main(){
     //runtimeEntriesCount needs to be incremented when admin adds new entry
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
     printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
+    print_all_entries();
 
     printf("Ctrl+C to terminate the server %d.\n\n", (int)(getpid()));
     
@@ -154,6 +154,7 @@ void admin_loop(int clientSocket) {
                 break;
 
             default:
+                printf("%d - Unexpected request\n\n", choice);
                 break; 
         }
     }
@@ -185,6 +186,8 @@ void user_loop(int clientSocket) {
                 break;
                 
             default:
+                if (choice <= 5) printf("%d - Unauthorized request\n\n", choice);
+                else printf("%d - Unexpected request\n\n", choice);
                 break; 
         }
     }
@@ -254,11 +257,9 @@ void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesC
 
 //Returns 0 if succesful, -1 if all dataEntry fields not present, -2 if dataEntry not found
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete) {
-    int outcome = 0;
-
     //Validate query
-    outcome = validate_entry(entryToDelete);
-    if (outcome < 0) return -1;
+    if (validate_entry(entryToDelete) < 0) return -1;
+    sanitize_entry(&entryToDelete);
 
     //This assumes that there cannot be duplicated entries
     //Search record
@@ -278,26 +279,51 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
     dataEntry editedEntry;
     receiveDataEntry(clientSocket, &editedEntry);
 
-    edit_record(clientSocket, entries, entriesCount, entryToEdit, editedEntry);
+    int outcome = edit_record(clientSocket, entries, entriesCount, entryToEdit, editedEntry);
+    send_signal(clientSocket, &outcome);
+    
+    if (outcome == -1) {
+        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: no such entry in the database\n";
+        printf("Outcome %d - failed to edit record: %s", outcome, errorMessage);
+        sendMsg(clientSocket, errorMessage);
+    }
+    else if (outcome == -2) {
+        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: invalid modifications\n";
+        printf("Outcome %d - failed to edit record: %s", outcome, errorMessage);
+        sendMsg(clientSocket, errorMessage);
+    }
 }
 
-void edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
+//Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
+int edit_record(int clientSocket, dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
+    //Check if entryToEdit is valid and sanitize it
+    if (validate_entry(entryToEdit) < 0) return -1;
+    sanitize_entry(&entryToEdit);
+
+    //Check if entryToEdit is present in the database
     int position = search_record_position(entries, entriesCount, entryToEdit);
-    send_signal(clientSocket, &position);
+    if (position < 0) return -1;
 
-    if (position < 0) {
-        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: no such entry in the database\n";
-        printf("%s", errorMessage);
-        sendMsg(clientSocket, errorMessage);
-        return;
-    }
-
-    if (strlen(editedEntry.name) > 0)
+    //Copy all the fields that are present in editedEntry
+    int emptyEntry = 1;
+    if (strlen(editedEntry.name) > 0) {
+        if (check_name(editedEntry.name) <= 0) return -2;
+        remove_extra_whitespace(editedEntry.name); //Could cause problems
         strcpy(entries[position].name, editedEntry.name);
-    if (strlen(editedEntry.address) > 0)
+        emptyEntry = 0;
+    }
+    if (strlen(editedEntry.address) > 0) {
+        remove_extra_whitespace(editedEntry.address); //Could cause problems
         strcpy(entries[position].address, editedEntry.address);
-    if (strlen(editedEntry.phoneNumber) > 0)
+        emptyEntry = 0;
+    }
+    if (strlen(editedEntry.phoneNumber) > 0) {
+        if (check_phone_number(editedEntry.phoneNumber) != 10) return -2;
+        remove_all_whitespace(editedEntry.phoneNumber);
         strcpy(entries[position].phoneNumber, editedEntry.phoneNumber);
+        emptyEntry = 0;
+    }
+    if (emptyEntry == 1) return -2;
 
     //For now only prints name after success
     printf("Edit was a success: new name %s\n", entries[position].name);
@@ -321,6 +347,7 @@ void search_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     send_entries(clientSocket, queryResults, resultsCount);
 }
 
+//Returns the number of found entries
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]) {
     const char *fileName = "filteredEntryees.anActualReadableTxtFileAndNotRandomBytes";
 
@@ -360,9 +387,6 @@ int search_record_position(dataEntry entries[], int entriesCount, dataEntry quer
 }
 
 
-//NOTE S: this function would be deprecated because we never save to file single a single Entry
-//NOTE A: this function is a server procedure, what it actually does when saving should be irrelevant. 
-//NOTE A: the code will be refactored to better reflect this.
 void add_new_record_procedure(int clientSocket) {
     dataEntry newDataEntry;
     receiveDataEntry(clientSocket, &newDataEntry);
@@ -496,7 +520,7 @@ void logout_procedure() {
 }
 
 //For main server and child user servers
-void handle_admin_reset_signal(int sig){
+void handle_admin_death_signal(int sig){
     //If main server reset admin counter and tell child user servers to update db
     if (mainServerPid == getpid()) {
         adminOnline = 0;
@@ -512,7 +536,7 @@ void handle_admin_reset_signal(int sig){
 }
 
 //For main server only
-void handle_user_reset_signal(int sig) {
+void handle_user_death_signal(int sig) {
     usersOnline--;
     if (usersOnline == 0) userServersGroupPid = 0; //Reset control group if no more users online
     printf("There are now %d users online\n", usersOnline);

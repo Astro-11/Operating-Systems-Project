@@ -69,7 +69,7 @@ int main(){
     case EDIT_RECORD:
         send_signal(clientSocket, &choice);
         dataEntry entryToEdit = {"Mario Rossi", "Via Roma 1, 00100 Roma", "06 12345678"};
-        dataEntry editedEntry = {"Mario Draghi", "", ""};
+        dataEntry editedEntry = {"  Mario Draghi", "", ""};
         edit_record(clientSocket, entryToEdit, editedEntry);
         if (logoutRequested) logout(clientSocket);
         else busy = 0;
@@ -135,8 +135,7 @@ void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry)
         receiveMsg(clientSocket, failureMsg);
         printf("Request failed: %s\n", failureMsg);
     }
-
-    printf("Entry succesfully edited\n");
+    else (printf("Entry succesfully edited\n"));
 }
 
 void receive_entries(int clientSocket) {
