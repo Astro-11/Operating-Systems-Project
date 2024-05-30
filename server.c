@@ -64,7 +64,7 @@ int main(){
     //runtimeEntriesCount needs to be incremented when admin adds new entry
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
     printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
-    print_all_entries(runtimeDatabase, runtimeEntriesCount);
+    //print_all_entries(runtimeDatabase, runtimeEntriesCount);
 
     printf("Ctrl+C to terminate the server %d.\n\n", (int)(getpid()));
     
@@ -420,7 +420,6 @@ int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEnt
 
     entries[*entriesCount] = newDataEntry;
     *entriesCount = *entriesCount + 1;
-    print_all_entries(entries, *entriesCount);
     return *entriesCount;
 }
 
