@@ -1,3 +1,31 @@
+## Server InterProcessCommunication:
+
+    SIGINT:
+        Main Server: 
+            Inoltra il segnale di SIGINT al gruppo dei client server, poi esce con insuccesso.
+        Admin Server:
+            Salva le modifiche al runtimeDb sull'effettivo database, poi esce con insuccesso.
+        User Server:
+            Esce con insuccesso.
+
+    SIGUSR1:
+        Main Server:
+            Riduce il numero di admin online a 0 e imposta il proprio outdatedRuntimeDb a 1.
+            Invia poi un segnale SIGUSR1 al gruppo degli User Server informandoli della necessità di aggiornare i propri RuntimeDb.
+        User Server:
+            Riceve il segnale dal Main Server e imposta il proprio outdatedRuntimeDb a 1.
+
+    SIGUSR2:
+        Main Server:
+            Riduce di uno il numero di client attualmente collegati.
+
+    LOGOUT:
+        Admin Server:
+            Salva le modifiche al runtimeDb sull'effettivo database, poi informa il Main Server della propria morte tramite SIGUSR1 ed esce con successo.
+        User Server:
+            Informa il Main Server della propria morte tramite SIGUSR2 ed esce con successo.
+
+
 ## SocketClientTest:
 
     void add_new_record(int clientSocket);
