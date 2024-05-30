@@ -15,6 +15,7 @@ typedef struct {
 } dataEntry;
 
 void debug_populate_db();
+void print_data_entry(dataEntry entry);
 
 FILE * open_db_read();
 
@@ -31,11 +32,13 @@ int countEntries(FILE *filePointer, int sizeOfEntry);
 int readEntries(FILE *filePointer, dataEntry dataEntries[]);
 
 int remove_all_whitespace(char str[]);
+int remove_extra_whitespace(char str[]);
 
 int check_name(char name[]);
 int check_phone_number(char phoneNumber[]); 
 
 int validate_entry(dataEntry entry);
+void sanitize_entry(dataEntry *entry);
 
 char* rtrim(char *str);
 

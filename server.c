@@ -176,7 +176,9 @@ int login_procedure(int clientSocket) {
         printf("Admin access granted to a client.\n");
         return ADMIN;
     }
-    else if (clientType == BASE) {
+    // As long as we have only two types of login we should only use else or a we could have uncovered control flows paths
+    // else if (clientType == BASE) {
+    else  {    
         return BASE;
     }
 }

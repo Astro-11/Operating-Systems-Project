@@ -54,6 +54,12 @@ void debug_populate_db() {
     close_db(db);
 }
 
+void print_data_entry(dataEntry entry) {
+    printf("Name_________: %s\n", entry.name);
+    printf("Address______: %s\n", entry.address);
+    printf("Phone Number_: %s\n", entry.phoneNumber);
+}
+
 FILE * open_db_read() {
     FILE *myFilePtr;
     myFilePtr = fopen(YELLOWPAGES_DB, "r");
@@ -154,27 +160,73 @@ void readEntireFile(FILE *filePointer) {
 //Removes whitespaces and /n
 //Returns lenght of string after cleaning
 int remove_all_whitespace(char str[]) {
-    
-    int len = strlen(str);
-    
-    if (len <= 0) 
-        return 0;
-    
-    int i = 0;
-    while (i < len) {
-        if (isspace(str[i]) != 0) {
-            int j = i;
-            //Shift all chars one place to the left
-            while (j < len) {
-                //printf("Char %c changed into %c\n", str[j], str[j+1]);
-                str[j] = str[j+1];
-                j++;
-            }
-            len--;
+    int i = 0; 
+    int len = 0;
+    while (str[i] != '\0'){
+        if (!isspace(str[i])) 
+            str[len++] = str[i];
+        i++;
         }
-        else i++;
-    }
+    
+    str[len] = '\0';
+
     return len;
+    // int len = strlen(str);
+    
+    // if (len <= 0) 
+    //     return 0;
+    
+    // int i = 0;
+    // while (i < len) {
+    //     if (isspace(str[i]) != 0) {
+    //         int j = i;
+    //         //Shift all chars one place to the left
+    //         while (j < len) {
+    //             //printf("Char %c changed into %c\n", str[j], str[j+1]);
+    //             str[j] = str[j+1];
+    //             j++;
+    //         }
+    //         len--;
+    //     }
+    //     else i++;
+    // }
+    // return len;
+}
+
+int remove_extra_whitespace(char str[]) {
+
+    int len = strlen(str);
+    int start = 0;
+    int end = len - 1;
+    int firstSpace = 1; // keeps track if we have already encountered a space or not
+    
+    while (isspace(str[start]) && start <= end)
+        start++;
+    
+    if(start > end){
+        str[0] = '\0';
+        return 0;
+    }
+
+    while (end >= start && isspace(str[end]))
+        end--;
+
+    // Reduce multiple spaces in between and copy to the start of the string
+    int j = 0;
+    for (int i = start; i <= end; i++) {
+        if (isspace(str[i])) {
+            if (firstSpace) {
+                str[j++] = ' ';
+                firstSpace = 0;
+            }
+        } else {
+            str[j++] = str[i];
+            firstSpace = 1;
+        }
+    }
+    
+    str[j] = '\0';
+    return j;
 }
 
 int check_name(char name[]) {
@@ -196,34 +248,13 @@ int check_phone_number(char phoneNumber[]) {
     int i = 0;
     while ((c = phoneNumber[i++]) != '\0') 
         if (!isdigit(c)){
-            if ( c != ' ') return 0; 
+            if ( c != ' ') 
+                return 0; 
         } else
             count++;
     
     return count;
 }
-// TODO Sanitize entry
-
-//Return 0 if entry is valid, negative otherwise
-int validate_entry(dataEntry entry) {
-    char buffer[256];
-
-    strcpy(buffer, entry.name);
-    remove_all_whitespace(buffer);
-    if (check_name(buffer) <= 0) return -1;
-    
-    strcpy(buffer, entry.address);
-    remove_all_whitespace(buffer);
-    if (strlen(buffer) <= 0) return -2;
-    
-    strcpy(buffer, entry.phoneNumber);
-    remove_all_whitespace(buffer);
-    if (check_phone_number(buffer) <= 0) return -3;
-    
-    return 0;
-}
-
-
 
 char* rtrim(char *str) {
     int len = strlen(str);
@@ -233,6 +264,41 @@ char* rtrim(char *str) {
     str[len] = '\0';
     return str;
 }
+
+
+//Return 0 if entry is valid, negative otherwise
+int validate_entry(dataEntry entry) {
+    // char buffer[256];
+
+    // strcpy(buffer, entry.name);
+    // remove_all_whitespace(buffer);
+    if (check_name(entry.name) <= 0)
+        return -1;
+    
+    // strcpy(buffer, entry.address);
+    // remove_all_whitespace(buffer);
+    if (strlen(rtrim(entry.address)) <= 0) 
+        return -2;
+    
+    // strcpy(buffer, entry.phoneNumber);
+    // remove_all_whitespace(buffer);
+    if (check_phone_number(entry.phoneNumber) != 10)
+        return -3;
+    
+    return 0;
+}
+
+
+// sanitize_entry() assumes the input has already been validated
+// Input needs to be passed explicitly with pointer and field accessed with -> operator 
+// because by default structs are passed by copy and not reference 
+void sanitize_entry(dataEntry *entry) {
+    remove_extra_whitespace(entry->name);
+    remove_extra_whitespace(entry->address);
+    remove_all_whitespace(entry->phoneNumber);
+}
+
+
 
 //NOTE A: the database IS the file. Referring to runtime dataEntry arrays as db might be confusing.
 //Returns the number of entries actually saved to db
