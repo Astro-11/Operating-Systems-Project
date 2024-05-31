@@ -293,6 +293,7 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
 }
 
 //Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
+//NOTE S: But it never returns 0?
 int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
     //Check if entryToEdit is valid and sanitize it
     if (validate_entry(entryToEdit) < 0) return -1;
@@ -311,6 +312,7 @@ int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, da
         emptyEntry = 0;
     }
     if (strlen(editedEntry.address) > 0) {
+        if (check_address(editedEntry.address) <= 0) return -2;
         remove_extra_whitespace(editedEntry.address); //Could cause problems
         strcpy(entries[position].address, editedEntry.address);
         emptyEntry = 0;

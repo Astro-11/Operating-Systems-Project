@@ -36,6 +36,7 @@ int remove_extra_whitespace(char str[]);
 
 int check_name(char name[]);
 int check_phone_number(char phoneNumber[]); 
+int check_address(char address[]); 
 
 int validate_entry(dataEntry entry);
 void sanitize_entry(dataEntry *entry);

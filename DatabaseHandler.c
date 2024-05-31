@@ -236,10 +236,24 @@ int check_name(char name[]) {
     int i = 0;
     while ((c = name[i++]) != '\0') 
         if (!isalpha(c)){
-            if ( c != ' ') return 0; 
+            if ( c != ' ') 
+                return 0; 
         } else
             count++;
     
+    return count;
+}
+
+int check_address(char address[]) {
+    int count = 0;
+    char c;
+    int i = 0;
+    while ((c = address[i++]) != '\0') 
+        if (c != ' ' && isspace(c)){
+                return 0; 
+        } else{
+            count++;
+        }
     return count;
 }
 
@@ -249,11 +263,15 @@ int check_phone_number(char phoneNumber[]) {
     int i = 0;
     while ((c = phoneNumber[i++]) != '\0') 
         if (!isdigit(c)){
-            if ( c != ' ') 
+            if (c != ' ')
+            //              &&
+            //     c != '.' &&
+            //     c != '-' &&
+            //     c != '_' 
                 return 0; 
-        } else
+        } else{
             count++;
-    
+        }
     return count;
 }
 
@@ -269,20 +287,13 @@ char* rtrim(char *str) {
 
 //Return 0 if entry is valid, negative otherwise
 int validate_entry(dataEntry entry) {
-    // char buffer[256];
 
-    // strcpy(buffer, entry.name);
-    // remove_all_whitespace(buffer);
     if (check_name(entry.name) <= 0)
         return -1;
     
-    // strcpy(buffer, entry.address);
-    // remove_all_whitespace(buffer);
-    if (strlen(rtrim(entry.address)) <= 0) 
+    if (check_address(entry.address) <= 0) 
         return -2;
     
-    // strcpy(buffer, entry.phoneNumber);
-    // remove_all_whitespace(buffer);
     if (check_phone_number(entry.phoneNumber) != 10)
         return -3;
     
