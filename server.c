@@ -61,7 +61,7 @@ int main(){
     int serverSocket = create_server_socket(PORT);
 
     debug_populate_db(); //WARNING: OVERWRITES!
-    //runtimeEntriesCount needs to be incremented when admin adds new entry
+    //WARNING!!! runtimeEntriesCount needs to be incremented when admin adds new entry
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
     printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
     //print_all_entries(runtimeDatabase, runtimeEntriesCount);
@@ -74,9 +74,12 @@ int main(){
         int clientSocket = accept_client_connection(serverSocket);
 
         int clientType = login_procedure(clientSocket);
-        if (clientType == -1) continue; 
-        else if (clientType == ADMIN) adminOnline = 1;
-        else if (clientType == BASE) usersOnline++;
+        if (clientType == -1)
+            continue;
+        else if (clientType == ADMIN)
+            adminOnline = 1;
+        else if (clientType == BASE)
+            usersOnline++;
 
         if (outdatedRuntimeDb == 1) {
             update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
@@ -90,19 +93,20 @@ int main(){
             if(clientType == BASE) {
                 adminOnline = 0;
                 //If userServersGroup not initialized give it the pid of the first user server
-                if (userServersGroupPid == 0) userServersGroupPid = getpid(); 
+                if (userServersGroupPid == 0) 
+                    userServersGroupPid = getpid(); 
+                
                 setpgid(getpid(), userServersGroupPid);
                 user_loop(clientSocket);
             }
             else if (clientType == ADMIN) {
                 admin_loop(clientSocket);
             }
-        } 
-        else 
-        {
+        } else {
             printf("Closing connection with main server.\nCreated process %d to handle requests.\n\n", pid);
             //If userServersGroup not initialized give it the pid of the first user server
-            if (userServersGroupPid == 0) userServersGroupPid = pid;
+            if (userServersGroupPid == 0) 
+                userServersGroupPid = pid;
             close(clientSocket);
         }
     }
@@ -163,7 +167,10 @@ void user_loop(int clientSocket) {
     while(1) {
 
         int choice;
-        receive_signal(clientSocket, &choice);
+        int status = receive_signal(clientSocket, &choice);
+        if(status == 0)
+            choice = LOGOUT;
+
         if (outdatedRuntimeDb == 1) {
             update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
             outdatedRuntimeDb = 0;
@@ -184,45 +191,48 @@ void user_loop(int clientSocket) {
                 break;
                 
             default:
-                if (choice <= 5) printf("%d - Unauthorized request\n\n", choice);
-                else printf("%d - Unexpected request\n\n", choice);
+                if (choice <= 5)
+                    printf("%d - Unauthorized request\n\n", choice);
+                else 
+                    printf("%d - Unexpected request\n\n", choice);
                 break; 
         }
     }
 }
 
-//Returns -1 if login failed, 0 if admin logged in, 1 if user logged in
+// Requires from the client a signal that express ADMIN or BASE,
+// then if ADMIN requires a password and to have no other admin online at the same time
+// Returns -1 -> login failed, 
+//          0 -> ADMIN logged in, 
+//          1 -> BASE logged in
 int login_procedure(int clientSocket) {
     int clientType;
     receive_signal(clientSocket, &clientType);
-    if(clientType == ADMIN) {
-        char submittedPassword[MSG_LENGHT];
-        receiveMsg(clientSocket, submittedPassword);
-
-        if (strcmp(submittedPassword, ADMIN_PASSWORD) != 0){
-            sendMsg(clientSocket, ACCESS_DENIED);
-            close(clientSocket);
-
-            printf("Someone attemted to login with wrong credentials.\nACCESS DENIED.\n");
-            return -1;
-        }
-        if (adminOnline == 1){
-            sendMsg(clientSocket, ACCESS_DENIED);
-            close(clientSocket);
-
-            printf("An admin attempted to log in while privileges are already in use.\nACCESS DENIED.\n");
-            return -1;
-        }
-        
-        sendMsg(clientSocket, ACCESS_GRANTED);
-        printf("Admin access granted to a client.\n");
-        return ADMIN;
-    }
-    // As long as we have only two types of login we should only use else or a we could have uncovered control flows paths
-    // else if (clientType == BASE) {
-    else  {    
+    
+    if(clientType == BASE)
         return BASE;
+
+  
+    char submittedPassword[MSG_LENGHT];
+    receiveMsg(clientSocket, submittedPassword);
+
+    if (strcmp(submittedPassword, ADMIN_PASSWORD) != 0){
+        sendMsg(clientSocket, ACCESS_DENIED);
+        close(clientSocket);
+        printf("Someone attemted to login with wrong credentials.\nACCESS DENIED.\n");
+        return -1;
     }
+    if (adminOnline == 1){
+        sendMsg(clientSocket, ACCESS_DENIED);
+        close(clientSocket);
+        printf("An admin attempted to log in while privileges are already in use.\nACCESS DENIED.\n");
+        return -1;
+    }
+    
+    sendMsg(clientSocket, ACCESS_GRANTED);
+    printf("Admin access granted to a client.\n");
+    return ADMIN;
+    
 }
 
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
@@ -505,6 +515,7 @@ void handle_sigint(int sig) {
 //For User Server and Admin Server
 void logout_procedure() {
     //If child server 
+    // NOTE S: Can the parent server ever call this function?
     if(mainServerPid != getpid()) {
         //If admin then save to db and inform main server of your demise
         if (adminOnline == 1) {

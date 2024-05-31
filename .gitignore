@@ -11,6 +11,7 @@ socketClientTest
 socketServerTest
 *.o
 tuiPrototype
+tui*
 commitNotes.md
 junk.c
 clientTest
