@@ -10,26 +10,24 @@
 #include "DatabaseHandler.h"
 #include "SocketUtilities.h"
 
+#define DEBUG 1
+
 static int clientSocket;
 static int busy = 0;
 static int logoutRequested = 0;
 
-void add_new_record(int clientSocket);
-void delete_record(int clientSocket);
-void receive_entries(int clientSocket);
-void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry);
+int init(char password[]);
+int search_record(int clientSocket, dataEntry searchedEntry, dataEntry results[]);
+int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_LENGHT]);
+int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[MSG_LENGHT]);
+int receive_entries(int clientSocket);
+int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]);
 void logout(int clientSocket);
 
 void handle_sigint(int sig);
 
 int main(){
-    signal(SIGINT, handle_sigint);
-    clientSocket = create_client_socket(SERVER_IP, PORT);
-
-    char password[MSG_LENGHT] = "1234";
-    char response[MSG_LENGHT];
-    login(clientSocket, password, response);
-    //no_login(clientSocket);
+    clientSocket = init("0");
 
     choice_loop:
     printf("Select an option:\n"
@@ -46,32 +44,67 @@ int main(){
     choice = (int)strtol(choiceStr, 0, 10);
     busy = 1;
 
+    int outcome = 0;
+    char errorMessage[MSG_LENGHT];
+
     switch (choice)
     {
     case SEARCH_DB:
         send_signal(clientSocket, &choice);
         dataEntry testQuery = { "Mario" "" ""};
-        sendDataEntry(clientSocket, &testQuery);
-        receive_entries(clientSocket);
+        
+        dataEntry results[10];
+        search_record(clientSocket, testQuery, results);
+
         if (logoutRequested) logout(clientSocket);
         else busy = 0;
         break;
     case ADD_RECORD:
         send_signal(clientSocket, &choice);
-        add_new_record(clientSocket);
+
+        char name[MSG_LENGHT];
+        char address[MSG_LENGHT];
+        char phoneNumber[MSG_LENGHT];
+
+        printf("Name: ");
+        fgets(name, MSG_LENGHT, stdin);
+        printf("Address: ");
+        fgets(address, MSG_LENGHT, stdin);
+        printf("Number: ");
+        fgets(phoneNumber, MSG_LENGHT, stdin);
+
+        dataEntry newDataEntry;
+        strcpy(newDataEntry.name, rtrim(name));
+        strcpy(newDataEntry.address, rtrim(address));
+        strcpy(newDataEntry.phoneNumber, rtrim(phoneNumber));
+
+        outcome = add_new_record(clientSocket, newDataEntry, errorMessage);
+        if (outcome < 0) printf("Request failed: %s\n", errorMessage);
+        else (printf("Entry succesfully added\n"));
+
         if (logoutRequested) logout(clientSocket);
         else busy = 0;
         break;
     case REMOVE_RECORD:
         send_signal(clientSocket, &choice);
-        delete_record(clientSocket);
+        dataEntry testEntry = {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"};
+
+        outcome = delete_record(clientSocket, testEntry, errorMessage);
+        if (outcome < 0) printf("Request failed: %s\n", errorMessage);
+        else printf("%s succesfully removed from database\n", testEntry.name);
+
         if (logoutRequested) logout(clientSocket);
+        else busy = 0;
         break;
     case EDIT_RECORD:
         send_signal(clientSocket, &choice);
         dataEntry entryToEdit = {"Mario Rossi", "Via Roma 1, 00100 Roma", "06 12345678"};
         dataEntry editedEntry = {"  Mario Draghi", "", ""};
-        edit_record(clientSocket, entryToEdit, editedEntry);
+
+        outcome = edit_record(clientSocket, entryToEdit, editedEntry, errorMessage);
+        if (outcome = 1) printf("Request failed: %s\n", errorMessage);
+        else (printf("Entry succesfully edited\n"));
+
         if (logoutRequested) logout(clientSocket);
         else busy = 0;
         break;
@@ -90,89 +123,90 @@ int main(){
     goto choice_loop;
 }
 
-void add_new_record(int clientSocket) {
-    char name[MSG_LENGHT];
-    char address[MSG_LENGHT];
-    char phoneNumber[MSG_LENGHT];
+//Set password as 0 to authenticate as BASE
+//Returns client socket if succesful, -1 if failed 
+int init(char password[]) {
+    signal(SIGINT, handle_sigint);
+    clientSocket = create_client_socket(SERVER_IP, PORT);
 
-    printf("Name: ");
-    fgets(name, MSG_LENGHT, stdin);
-    printf("Address: ");
-    fgets(address, MSG_LENGHT, stdin);
-    printf("Number: ");
-    fgets(phoneNumber, MSG_LENGHT, stdin);
-    // printf("Received name: %s\n", name);
-    // printf("Received addr: %s\n", address);
-    // printf("Received phon: %s\n", phoneNumber);
-
-    dataEntry newDataEntry;
-    strcpy(newDataEntry.name, rtrim(name));
-    strcpy(newDataEntry.address, rtrim(address));
-    strcpy(newDataEntry.phoneNumber, rtrim(phoneNumber));
-    //Entry validation works if input is inserted by code but not if inserted through terminal
-    //dataEntry newDataEntry = { "Mario Peppe", "Viale Roma 2", "1112223334"};
-    sendDataEntry(clientSocket, &newDataEntry);
-
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    if (outcome < 0) {
-        char failureMsg[MSG_LENGHT];
-        receiveMsg(clientSocket, failureMsg);
-        printf("Request failed: %s\n", failureMsg);
+    if (password == 0) {
+        no_login(clientSocket);
+    } else {
+        char response[MSG_LENGHT];
+        login(clientSocket, password, response);
+        if(strcmp(response, ACCESS_GRANTED) != 0 )
+            return -1;
     }
-    else (printf("Entry succesfully added\n"));
+
+    return clientSocket;
 }
 
-void delete_record(int clientSocket) {
-    dataEntry testEntry = {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"};
-    sendDataEntry(clientSocket, &testEntry);
-
-    //Receive validation
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    if (outcome != 0) {
-        char failureMsg[MSG_LENGHT];
-        receiveMsg(clientSocket, failureMsg);
-        printf("Request failed: %s\n", failureMsg);
-        return;
-    } 
-    else printf("%s succesfully removed from database\n", testEntry.name);
-}
-
-void edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry) {
-    sendDataEntry(clientSocket, &entryToEdit);
-    sendDataEntry(clientSocket, &editedEntry);
-
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    if (outcome < 0) {
-        char failureMsg[MSG_LENGHT];
-        receiveMsg(clientSocket, failureMsg);
-        printf("Request failed: %s\n", failureMsg);
-    }
-    else (printf("Entry succesfully edited\n"));
-}
-
-void receive_entries(int clientSocket) {
+//Returns the number of found records 
+int search_record(int clientSocket, dataEntry searchedEntry, dataEntry results[]) {
+    sendDataEntry(clientSocket, &searchedEntry);
 
     //Receive and parse the number of entries saved in the db
     int entriesCount;
     receive_signal(clientSocket, &entriesCount);
+
+    #if DEBUG
     printf("There are %d entries:\n", entriesCount);
+    #endif
 
     //Receive as many entries as present
     int i = 0;
     while (i < entriesCount) {
         dataEntry receivedDataEntry;
-        int received = receiveDataEntry(clientSocket, &receivedDataEntry);
-        printf("Received %d bytes - ", received);
-        printf("Nome: %s, Indirizzo: %s, Numero: %s \n", 
-                receivedDataEntry.name, 
-                receivedDataEntry.address, 
-                receivedDataEntry.phoneNumber);
-        
+        receiveDataEntry(clientSocket, &receivedDataEntry);
+        results[i] = receivedDataEntry;
         i++;
+
+        #if DEBUG
+        printf("Received:\n");
+        printf("Nome: %s, Indirizzo: %s, Numero: %s\n", 
+                results[i-1].name, 
+                results[i-1].address, 
+                results[i-1].phoneNumber);
+        #endif
     }
+
+    return entriesCount;
+}
+
+int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_LENGHT]) {
+    sendDataEntry(clientSocket, &newEntry);
+
+    int outcome;
+    receive_signal(clientSocket, &outcome);
+    if (outcome < 0) {
+        receiveMsg(clientSocket, errorMessage);
+    }
+
+    return outcome;
+}
+
+int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[MSG_LENGHT]) {
+    sendDataEntry(clientSocket, &entryToDelete);
+
+    //Receive validation
+    int outcome;
+    receive_signal(clientSocket, &outcome);
+    if (outcome != 0)
+        receiveMsg(clientSocket, errorMessage);
+
+    return outcome;
+}
+
+int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]) {
+    sendDataEntry(clientSocket, &entryToEdit);
+    sendDataEntry(clientSocket, &editedEntry);
+
+    int outcome;
+    receive_signal(clientSocket, &outcome);
+    if (outcome < 0)
+        receiveMsg(clientSocket, errorMessage);
+
+    return outcome;
 }
 
 void logout(int clientSocket) {
