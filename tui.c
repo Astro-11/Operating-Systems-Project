@@ -545,6 +545,7 @@ int open_form_to_delete_an_entry(int clientSocket){
 
                 int outcome = -1;
                 receive_signal(clientSocket, &outcome);
+
                 if (outcome != 0) {
                     char failureMsg[MSG_LENGHT];
                     receiveMsg(clientSocket, failureMsg);
@@ -703,7 +704,7 @@ int open_form_to_edit_an_entry(int clientSocket){
                 strncpy(entryToEdit.phoneNumber,rtrim(field_buffer(fields[2], 0)), sizeof(entryToEdit.phoneNumber) - 1);
 
                 sendDataEntry(clientSocket, &entryToEdit);
-
+                
                 int outcome = -1;
                 receive_signal(clientSocket, &outcome);
                 if (outcome != 0) {

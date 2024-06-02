@@ -359,7 +359,7 @@ void edit_record_procedure(int clientSocket, dataEntry runtimeDatabase[], int en
     // }
 }
 
-//Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
+// Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
 // NOTE S: But it never returns 0?
 // int edit_record(dataEntry runtimeDatabase[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
 //     //Check if entryToEdit is valid and sanitize it
@@ -496,7 +496,7 @@ int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEnt
     if (validate_entry(newDataEntry) < 0) 
         return -1;
     sanitize_entry(&newDataEntry);
-    if (search_record_position(entries, *entriesCount, newDataEntry) != 0) 
+    if (search_record_position(entries, *entriesCount, newDataEntry) != -1) 
         return -2;
 
     entries[*entriesCount] = newDataEntry;
@@ -580,7 +580,7 @@ void handle_sigint(int sig) {
 
 //For User Server and Admin Server
 void logout_procedure() {
-    //If child server 
+    // If child server 
     // NOTE S: Can the parent server ever call this function?
     if(mainServerPid != getpid()) {
         //If admin then save to db and inform main server of your demise
