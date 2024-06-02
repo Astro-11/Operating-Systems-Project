@@ -26,7 +26,7 @@ void logout_procedure();
 int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEntry);
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete);
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]);
-// int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry);
+int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry);
 
 int search_record_position(dataEntry entries[], int entriesCount, dataEntry query);
 int matches(dataEntry entry, dataEntry filter);
@@ -290,7 +290,7 @@ int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete
 // Send the complete entry if OK
 // Receive the COMPLETE new entry
 // Send signal to inform of success or failure
-void edit_record_procedure(int clientSocket, dataEntry runtimeDatabase[], int entriesCount) {
+/* void edit_record_procedure(int clientSocket, dataEntry runtimeDatabase[], int entriesCount) {
     dataEntry entryToEdit;
     receiveDataEntry(clientSocket, &entryToEdit);
 
@@ -357,46 +357,63 @@ void edit_record_procedure(int clientSocket, dataEntry runtimeDatabase[], int en
     //         sendMsg(clientSocket, errorMessage);
     //     } break;
     // }
+} */
+
+void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
+    dataEntry entryToEdit;
+    receiveDataEntry(clientSocket, &entryToEdit);
+    dataEntry editedEntry;
+    receiveDataEntry(clientSocket, &editedEntry);
+
+    int outcome = edit_record(entries, entriesCount, entryToEdit, editedEntry);
+    send_signal(clientSocket, &outcome);
+
+    if (outcome == -1) {
+        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: no such entry in the database\n";
+        printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
+        sendMsg(clientSocket, errorMessage);
+    }
+    else if (outcome == -2) {
+        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: invalid modifications\n";
+        printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
+        sendMsg(clientSocket, errorMessage);
+    }
 }
 
-// Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
-// NOTE S: But it never returns 0?
-// int edit_record(dataEntry runtimeDatabase[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
-//     //Check if entryToEdit is valid and sanitize it
-//     if (validate_entry(entryToEdit) < 0) 
-//         return -1;
-//     sanitize_entry(&entryToEdit);
+//Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
+int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry) {
+    //Check if entryToEdit is valid and sanitize it
+    if (validate_entry(entryToEdit) < 0) return -1;
+    sanitize_entry(&entryToEdit);
 
-//     //Check if entryToEdit is present in the database
-//     int recordPosition = search_record_position(runtimeDatabase, entriesCount, entryToEdit);
-//     if (recordPosition < 0) 
-//         return recordPosition;
+    //Check if entryToEdit is present only once in the database
+    int position = search_record_position(entries, entriesCount, entryToEdit);
+    if (position < 0) return -1;
 
-//     //Copy all the fields that are present in editedEntry
-//     int emptyEntry = 1;
-//     if (strlen(editedEntry.name) > 0) {
-//         if (check_name(editedEntry.name) <= 0) return -3;
-//         remove_extra_whitespace(editedEntry.name); //Could cause problems
-//         strcpy(runtimeDatabase[recordPosition].name, editedEntry.name);
-//         emptyEntry = 0;
-//     }
-//     if (strlen(editedEntry.address) > 0) {
-//         if (check_address(editedEntry.address) <= 0) return -3;
-//         remove_extra_whitespace(editedEntry.address); //Could cause problems
-//         strcpy(runtimeDatabase[recordPosition].address, editedEntry.address);
-//         emptyEntry = 0;
-//     }
-//     if (strlen(editedEntry.phoneNumber) > 0) {
-//         if (check_phone_number(editedEntry.phoneNumber) != 10) return -3;
-//         remove_all_whitespace(editedEntry.phoneNumber);
-//         strcpy(runtimeDatabase[recordPosition].phoneNumber, editedEntry.phoneNumber);
-//         emptyEntry = 0;
-//     }
-//     if (emptyEntry == 1) return -3;
+    //Copy all the fields that are present in editedEntry
+    int emptyEntry = 1;
+    if (strlen(editedEntry.name) > 0) {
+        if (check_name(editedEntry.name) <= 0) return -2;
+        remove_extra_whitespace(editedEntry.name); //Could cause problems
+        strcpy(entries[position].name, editedEntry.name);
+        emptyEntry = 0;
+    }
+    if (strlen(editedEntry.address) > 0) {
+        remove_extra_whitespace(editedEntry.address); //Could cause problems
+        strcpy(entries[position].address, editedEntry.address);
+        emptyEntry = 0;
+    }
+    if (strlen(editedEntry.phoneNumber) > 0) {
+        if (check_phone_number(editedEntry.phoneNumber) != 10) return -2;
+        remove_all_whitespace(editedEntry.phoneNumber);
+        strcpy(entries[position].phoneNumber, editedEntry.phoneNumber);
+        emptyEntry = 0;
+    }
+    if (emptyEntry == 1) return -2;
 
-//     //For now only prints name after success
-//     printf("Edit was a success: new name %s\n", runtimeDatabase[recordPosition].name);
-// }
+    //For now only prints name after success
+    printf("Edit was a success: new name %s\n", entries[position].name);
+}
 
 
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
@@ -451,7 +468,7 @@ int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataE
 // If present we return the position in the database -> i
 // If it's not present -> -1
 // If present but multiple matches are found -> -2
-int search_record_position(dataEntry runtimeDatabase[], int entriesCount, dataEntry query) {
+/*int search_record_position(dataEntry runtimeDatabase[], int entriesCount, dataEntry query) {
     int position = -1;
     for(int i = 0; i < entriesCount; i++)
         if(matches(runtimeDatabase[i], query) && position == -1){ 
@@ -461,6 +478,13 @@ int search_record_position(dataEntry runtimeDatabase[], int entriesCount, dataEn
         }
 
     return position;
+}*/
+
+int search_record_position(dataEntry entries[], int entriesCount, dataEntry query) {
+    for(int i = 0; i < entriesCount; i++) {
+        if(matches(entries[i], query)) return i;
+    }
+    return -1;
 }
 
 
