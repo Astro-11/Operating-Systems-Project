@@ -27,7 +27,7 @@ void logout(int clientSocket);
 void handle_sigint(int sig);
 
 int main(){
-    clientSocket = init("0");
+    clientSocket = init("1234");
 
     choice_loop:
     printf("Select an option:\n"
@@ -50,7 +50,6 @@ int main(){
     switch (choice)
     {
     case SEARCH_DB:
-        send_signal(clientSocket, &choice);
         dataEntry testQuery = { "Mario" "" ""};
         
         dataEntry results[10];
@@ -60,8 +59,6 @@ int main(){
         else busy = 0;
         break;
     case ADD_RECORD:
-        send_signal(clientSocket, &choice);
-
         char name[MSG_LENGHT];
         char address[MSG_LENGHT];
         char phoneNumber[MSG_LENGHT];
@@ -86,8 +83,7 @@ int main(){
         else busy = 0;
         break;
     case REMOVE_RECORD:
-        send_signal(clientSocket, &choice);
-        dataEntry testEntry = {"Mario Rossi", "Via Roma 1, 00100 Roma", "+39 06 12345678"};
+        dataEntry testEntry = {"Mario Rossi", "Via Roma 1, 00100 Roma", "06 12345678"};
 
         outcome = delete_record(clientSocket, testEntry, errorMessage);
         if (outcome < 0) printf("Request failed: %s\n", errorMessage);
@@ -97,13 +93,20 @@ int main(){
         else busy = 0;
         break;
     case EDIT_RECORD:
-        send_signal(clientSocket, &choice);
-        dataEntry entryToEdit = {"Mario Rossi", "Via Roma 1, 00100 Roma", "06 12345678"};
-        dataEntry editedEntry = {"  Mario Draghi", "", ""};
+        dataEntry entryToEdit = {"Mario Rossi", "", ""};
 
-        outcome = edit_record(clientSocket, entryToEdit, editedEntry, errorMessage);
-        if (outcome = 1) printf("Request failed: %s\n", errorMessage);
-        else (printf("Entry succesfully edited\n"));
+        dataEntry searchResults[10];
+        int resultsCount = search_record(clientSocket, entryToEdit, searchResults);
+        if (resultsCount == 1) {
+            entryToEdit = searchResults[0];
+            dataEntry editedEntry = {"  Mario Draghi", "", ""};
+            outcome = edit_record(clientSocket, entryToEdit, editedEntry, errorMessage);
+
+            if (outcome < 0) printf("Request failed: %s\n", errorMessage);
+            else (printf("Entry succesfully edited\n"));
+        }
+        else 
+            printf("Request failed: more than one results was found");
 
         if (logoutRequested) logout(clientSocket);
         else busy = 0;
@@ -143,6 +146,8 @@ int init(char password[]) {
 
 //Returns the number of found records 
 int search_record(int clientSocket, dataEntry searchedEntry, dataEntry results[]) {
+    int choice = SEARCH_DB;
+    send_signal(clientSocket, &choice);
     sendDataEntry(clientSocket, &searchedEntry);
 
     //Receive and parse the number of entries saved in the db
@@ -162,7 +167,6 @@ int search_record(int clientSocket, dataEntry searchedEntry, dataEntry results[]
         i++;
 
         #if DEBUG
-        printf("Received:\n");
         printf("Nome: %s, Indirizzo: %s, Numero: %s\n", 
                 results[i-1].name, 
                 results[i-1].address, 
@@ -174,6 +178,8 @@ int search_record(int clientSocket, dataEntry searchedEntry, dataEntry results[]
 }
 
 int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_LENGHT]) {
+    int choice = ADD_RECORD;
+    send_signal(clientSocket, &choice);
     sendDataEntry(clientSocket, &newEntry);
 
     int outcome;
@@ -186,6 +192,8 @@ int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_L
 }
 
 int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[MSG_LENGHT]) {
+    int choice = REMOVE_RECORD;
+    send_signal(clientSocket, &choice);
     sendDataEntry(clientSocket, &entryToDelete);
 
     //Receive validation
@@ -198,6 +206,8 @@ int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[M
 }
 
 int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]) {
+    int choice = EDIT_RECORD;
+    send_signal(clientSocket, &choice);
     sendDataEntry(clientSocket, &entryToEdit);
     sendDataEntry(clientSocket, &editedEntry);
 
