@@ -10,6 +10,7 @@ TODO:
     - [X] Name is alphanum and trim left and right
     - [X] Phone number is num, has ten characters, allows indiscriminate white space when added or searched, is stored with no space for more uniform searching but is printed with a `"012 345 6789"` formatting. 
     - [ ] Prevent duplicated entries
+    - [ ] Decide wether to validate on the or on the db
 - [ ] Update all methods to use snake_case and all variables to use camelCase
 - [X] Update clients' internal entries to mantain database consistency after superuser commits changes to db
 - [X] Login and logout
@@ -20,6 +21,9 @@ TODO:
 - [X] Inter Process Communication inside of server
     - [X] Admin server should inform main server of new changes to the db and main server should inform user servers
     - [X] User servers and admin server should have their own control groups for signals, main server will keep a reference to the two control groups
+ - [ ] Update server delete procedure
+ - [ ] Fix server edit procedure in order to use new search_position()
+ - [ ] Finish the GUI
 
 
 QUESTIONS:
@@ -29,7 +33,8 @@ QUESTIONS:
     - If we handle them we do it client side or server side?
     - We need to test the behaviour of our code in this cases 
 - [ ] Do we need/want to handle overfilling the array at runtime?
-- [ ] Should we rename the "dataEntry" struct to "record"? It seems to me like you find the term confusing for things like entries[].
+    - Might be worth implementing a dynamic dataEntry list to circumvent problems with arrays
+- [ ] Should we rename the "dataEntry" struct to "record"? 
 - [ ] At the moment we are validating and sanitizing every entry both when adding it to the runtimeDb and the actual db. Should we do it only once?
 
 
