@@ -119,6 +119,8 @@ int main(){
 
 void admin_loop(int clientSocket) {
 
+    int errorCounter = 0;
+
     while(1) {
 
         int choice;
@@ -126,24 +128,28 @@ void admin_loop(int clientSocket) {
 
         switch (choice) {
             case SEARCH_DB:
+                errorCounter = 0;
                 printf("%d - Search database\n\n", choice);
                 search_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
                 printf("Search results succesfully sent to client\n");
                 break;
 
             case ADD_RECORD:
+                errorCounter = 0;
                 printf("%d - Add new record\n\n", choice);
                 add_new_record_procedure(clientSocket, runtimeDatabase, &runtimeEntriesCount);
                 printf("runtimeEntriesCount: %d\n",runtimeEntriesCount);
                 break;
 
             case REMOVE_RECORD:
+                errorCounter = 0;
                 printf("%d - Remove record\n\n", choice);
                 delete_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
                 printf("runtimeEntriesCount: %d\n",runtimeEntriesCount);
                 break;
 
             case EDIT_RECORD:
+                errorCounter = 0;
                 printf("%d - Edit record\n\n", choice);
                 edit_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
                 break;
@@ -156,15 +162,20 @@ void admin_loop(int clientSocket) {
                 break;
 
             default:
+                errorCounter++;
+                if (errorCounter > 10) kill(getpid(), SIGINT);
+                
                 printf("%d - Unexpected request\n\n", choice);
                 // NOTE S: The server doesn't handle the crashing of clients, sleeps just avoinds messy printing on the terminal
-                sleep(3);
+                sleep(1);
                 break; 
         }
     }
 }
 
 void user_loop(int clientSocket) {
+
+    int errorCounter = 0;
 
     while(1) {
 
@@ -180,12 +191,14 @@ void user_loop(int clientSocket) {
             
         switch (choice) {
             case SEARCH_DB:
+                errorCounter = 0;
                 printf("%d - Search database\n\n", choice);
                 search_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
                 printf("Search results succesfully sent to client\n");
                 break;
 
             case LOGOUT: 
+                errorCounter = 0;
                 printf("%d - Logout attempt\n\n", choice);
                 logout_procedure();
                 close(clientSocket);
@@ -193,6 +206,9 @@ void user_loop(int clientSocket) {
                 break;
                 
             default:
+                errorCounter++;
+                if (errorCounter > 10) kill(getpid(), SIGINT);
+
                 if (choice <= 5)
                     printf("%d - Unauthorized request\n\n", choice);
                 else 

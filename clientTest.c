@@ -132,7 +132,7 @@ int init(char password[]) {
     signal(SIGINT, handle_sigint);
     clientSocket = create_client_socket(SERVER_IP, PORT);
 
-    if (password == 0) {
+    if (strcmp(password, "0") == 0) {
         no_login(clientSocket);
     } else {
         char response[MSG_LENGHT];
