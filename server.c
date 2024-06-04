@@ -399,6 +399,7 @@ int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, da
         emptyEntry = 0;
     }
     if (strlen(editedEntry.address) > 0) {
+        if (check_address(editedEntry.address) <= 0) return -2;
         remove_extra_whitespace(editedEntry.address); //Could cause problems
         strcpy(entries[position].address, editedEntry.address);
         emptyEntry = 0;
@@ -412,7 +413,8 @@ int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, da
     if (emptyEntry == 1) return -2;
 
     //For now only prints name after success
-    printf("Edit was a success: new name %s\n", entries[position].name);
+    printf("Edit was a success:\n");
+    print_data_entry(entries[position]);
 }
 
 
@@ -446,7 +448,7 @@ int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataE
     int resultsCount = 0;
 
     for(int i = 0; i < entriesCount; i++){
-        if(matches(entries[i], query)){
+        if(matches(entries[i], query) == 0){
             queryResults[resultsCount++] = entries[i];
 
             fprintf(fp, "Name____: %s\n", entries[i].name);
@@ -468,24 +470,24 @@ int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataE
 // If present we return the position in the database -> i
 // If it's not present -> -1
 // If present but multiple matches are found -> -2
-/*int search_record_position(dataEntry runtimeDatabase[], int entriesCount, dataEntry query) {
+int search_record_position(dataEntry runtimeDatabase[], int entriesCount, dataEntry query) {
     int position = -1;
     for(int i = 0; i < entriesCount; i++)
-        if(matches(runtimeDatabase[i], query) && position == -1){ 
-            position = i;
-        } else if (position != -1) {
-            return -2;
+        if (matches(runtimeDatabase[i], query) == 0) {
+            if (position == -1)
+                position = i;
+            else if (position != -1)
+                return -2;
         }
-
     return position;
-}*/
+}
 
-int search_record_position(dataEntry entries[], int entriesCount, dataEntry query) {
+/*int search_record_position(dataEntry entries[], int entriesCount, dataEntry query) {
     for(int i = 0; i < entriesCount; i++) {
-        if(matches(entries[i], query)) return i;
+        if(matches(entries[i], query) == 0) return i;
     }
     return -1;
-}
+}*/
 
 
 void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entriesCount) {
@@ -554,17 +556,18 @@ void send_entries(int clientSocket, dataEntry entries[], int entriesCount) {
     }
 }
 
+//Returns 0 if matches, -1 otherwise
 int matches(dataEntry entry, dataEntry filter) {
     if (strlen(filter.name) > 0 && strstr(entry.name, filter.name) == NULL) {
-        return 0;
+        return -1;
     }
     if (strlen(filter.address) > 0 && strstr(entry.address, filter.address) == NULL) {
-        return 0;
+        return -1;
     }
     if (strlen(filter.phoneNumber) > 0 && strstr(entry.phoneNumber, filter.phoneNumber) == NULL) {
-        return 0;
+        return -1;
     }
-    return 1;
+    return 0;
 }
 
 void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount) {
