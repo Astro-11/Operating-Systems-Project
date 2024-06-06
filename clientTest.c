@@ -69,7 +69,7 @@ int main(){
         #endif
 
         dataEntry results[10];
-        int count =  search_record(clientSocket, testQuery, results);
+        int count = search_record(clientSocket, testQuery, results);
         
         #if DEBUG
         printf("Total entries: %d\n\n", count);
@@ -107,7 +107,7 @@ int main(){
 
         } break;
     case REMOVE_RECORD:{
-        dataEntry testEntry = {"Mario Rossi", "Via Roma 1, 00100 Roma", "06 12345678"};
+        dataEntry testEntry = {"Mario Rossi", "", ""};
 
         outcome = delete_record(clientSocket, testEntry, errorMessage);
         if (outcome < 0) 
@@ -142,7 +142,11 @@ int main(){
                 printf("Request failed.\n%s\n", errorMessage);
             else 
                 printf("Entry succesfully edited\n");
-        }else{ 
+        }
+        else if (resultsCount == 0) { 
+            printf("Request failed: no results were found");
+        } 
+        else {
             printf("Request failed: more than one results was found\n");
         }
 
@@ -224,8 +228,8 @@ int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_L
 
 // Return: the outcome of the operation as an `int`  
 // outcome =  0 -> Successfull deletion
-// outcome = -1 -> Invalid entry (Invalid characters or errors filling fields of the data entry)
-// outcome = -2 -> Zero or more records already match the whole "signature" of the query, It should be exactly 1.
+// outcome = -1 -> No matching entries found
+// outcome = -2 -> More than one record already match the whole "signature" of the query, it should be exactly 1.
 // Side-effect: If failure saves an error message to `errorMessage`
 int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[MSG_LENGHT]) {
     int choice = REMOVE_RECORD;
