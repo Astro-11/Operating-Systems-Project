@@ -64,9 +64,13 @@ int main(){
     //WARNING!!! runtimeEntriesCount needs to be incremented when admin adds new entry
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
     printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
-    //print_all_entries(runtimeDatabase, runtimeEntriesCount);
+    
+    #if DEBUG
+        print_all_entries(runtimeDatabase, runtimeEntriesCount);
+    #endif
 
     printf("Ctrl+C to terminate the server %d.\n\n", (int)(getpid()));
+    
     
     while(1){
         printf("Main server is online listening for connection...\n");
@@ -255,44 +259,45 @@ int login_procedure(int clientSocket) {
     
 }
 
+
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
     dataEntry entryToDelete;
     receiveDataEntry(clientSocket, &entryToDelete);
 
     int outcome = delete_record(entries, entriesCount, entryToDelete);
-
-    //Send outcome signal
     send_signal(clientSocket, &outcome);
 
-    //Send possible failure message
-    char failureMessage[MSG_LENGHT];
-    if (outcome != 0) {
-        if (outcome == -1) {
-            char tempFailureMessage[MSG_LENGHT] = "All the fields in the query must be present";
-            strcpy(failureMessage, tempFailureMessage);
-        }
-        else if (outcome == -2) {
-            char tempFailureMessage[MSG_LENGHT] = "There are no such entries in the database";
-            strcpy(failureMessage, tempFailureMessage);
-        }
-        sendMsg(clientSocket, failureMessage);
-        printf("Outcome %d - failed to remove record: %s\n", outcome, failureMessage);
+    if (outcome == 0){
+        printf("Record succesfully removed from database\n");
         return;
     }
 
-    printf("Record succesfully removed from database\n");
+    char failureMessage[MSG_LENGHT];
+    if (outcome == -1)
+        strcpy(failureMessage, "All the fields in the query must be present and with legal characters");
+    else if (outcome == -2) 
+        strcpy(failureMessage, "The provided query matched 0 or multiple entries. It should be exactly 1.");
+
+    sendMsg(clientSocket, failureMessage);
+    printf("Outcome %d - failed to remove record: %s\n", outcome, failureMessage);
 }
+
+    
+
 
 //Returns 0 if succesful, -1 if all dataEntry fields not present, -2 if dataEntry not found
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete) {
     //Validate query
-    if (validate_entry(entryToDelete) < 0) return -1;
+    if (validate_entry(entryToDelete) < 0) 
+        return -1;
+
     sanitize_entry(&entryToDelete);
 
     //This assumes that there cannot be duplicated entries
     //Search record
     int entryToDeletePosition = search_record_position(entries, entriesCount, entryToDelete);
-    if (entryToDeletePosition < 0) return -2;
+    if (entryToDeletePosition < 0) 
+        return -2;
 
     //Delete (for now only sets first char to \0)
     entries[entryToDeletePosition].name[0] = '\0';
@@ -386,12 +391,12 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
 
     if (outcome == -1) {
         char errorMessage[MSG_LENGHT] = "Entry cannot be edited: no such entry in the database\n";
-        printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
+        printf("Outcome %d: failed to edit record\n%s\n", outcome, errorMessage);
         sendMsg(clientSocket, errorMessage);
     }
     else if (outcome == -2) {
         char errorMessage[MSG_LENGHT] = "Entry cannot be edited: invalid modifications\n";
-        printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
+        printf("Outcome %d: failed to edit record\n%s\n", outcome, errorMessage);
         sendMsg(clientSocket, errorMessage);
     }
 }
@@ -404,7 +409,8 @@ int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, da
 
     //Check if entryToEdit is present only once in the database
     int position = search_record_position(entries, entriesCount, entryToEdit);
-    if (position < 0) return -1;
+    if (position < 0) 
+        return -1;
 
     //Copy all the fields that are present in editedEntry
     int emptyEntry = 1;
@@ -439,46 +445,31 @@ void search_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     dataEntry query;
     receiveDataEntry(clientSocket, &query);
 
-    printf("Received query: \n\n\tName: %s\n\tAddress: %s\n\tPhone: %s\n\n", 
-                    query.name, 
-                    query.address, 
-                    query.phoneNumber);
+    printf("Received query:\n");
+    print_data_entry(query);
                     
     //Search for record
     dataEntry queryResults[entriesCount];
     int resultsCount = search_records(entries, entriesCount, query, queryResults);
 
     send_entries(clientSocket, queryResults, resultsCount);
+
+    #if DEBUG
+        printf("resultsCount: %d", resultsCount);
+        print_all_entries(queryResults, resultsCount);
+    #endif
 }
 
-//Returns the number of found entries
+
+// Returns the number of matching records found
+// Saves as a side-effect the entries found in the parameter queryResults[]
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]) {
-    const char *fileName = "filteredEntryees.anActualReadableTxtFileAndNotRandomBytes";
-
-    FILE *fp = fopen(fileName, "w");
-    if (fp == NULL) {
-        perror("Error opening file");
-        //return 1; // Return an error code
-    }
-
     int resultsCount = 0;
 
-    for(int i = 0; i < entriesCount; i++){
-        if(matches(entries[i], query) == 0){
+    for(int i = 0; i < entriesCount; i++)
+        if(matches(entries[i], query) == 0)
             queryResults[resultsCount++] = entries[i];
 
-            fprintf(fp, "Name____: %s\n", entries[i].name);
-            fprintf(fp, "Address_: %s\n", entries[i].address);
-            fprintf(fp, "Phone___: %s\n", entries[i].phoneNumber);
-            fprintf(fp, "----------------\n");
-            //printf("beep!\n");
-        } else {
-            //printf("nope!\n");
-        }
-    }
-
-    //printf("\nSearch results saved locally in file.\n\n");
-    fclose(fp);
     return resultsCount;
 }
 
@@ -548,13 +539,8 @@ int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEnt
 
 void print_all_entries(dataEntry entries[], int entriesCount) {
     int i = 0;
-    while (i < entriesCount) {
-        printf("\nNome: %s \nIndirizzo: %s \nNumero: %s \n", 
-            entries[i].name, 
-            entries[i].address, 
-            entries[i].phoneNumber);
-        i++;
-    }
+    while (i < entriesCount)
+        print_data_entry(entries[i++]);
 }
 
 void send_entries(int clientSocket, dataEntry entries[], int entriesCount) {
