@@ -274,30 +274,24 @@ void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesC
 
     char failureMessage[MSG_LENGHT];
     if (outcome == -1)
-        strcpy(failureMessage, "All the fields in the query must be present and with legal characters");
+        strcpy(failureMessage, "The provided query did not match any entries");
     else if (outcome == -2) 
-        strcpy(failureMessage, "The provided query matched 0 or multiple entries. It should be exactly 1.");
+        strcpy(failureMessage, "The provided query matched multiple entries. It should be exactly 1.");
 
     sendMsg(clientSocket, failureMessage);
+    //NOTE A: Should never happen?
     printf("Outcome %d - failed to remove record: %s\n", outcome, failureMessage);
 }
 
     
 
 
-//Returns 0 if succesful, -1 if all dataEntry fields not present, -2 if dataEntry not found
+//Returns 0 if succesful, -1 if dataEntry not found, -2 if multiple dataEntries found
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete) {
     //Validate query
-    if (validate_entry(entryToDelete) < 0) 
-        return -1;
-
-    sanitize_entry(&entryToDelete);
-
-    //This assumes that there cannot be duplicated entries
-    //Search record
     int entryToDeletePosition = search_record_position(entries, entriesCount, entryToDelete);
-    if (entryToDeletePosition < 0) 
-        return -2;
+    if (entryToDeletePosition < 0)
+        return entryToDeletePosition;     
 
     //Delete (for now only sets first char to \0)
     entries[entryToDeletePosition].name[0] = '\0';
@@ -455,7 +449,7 @@ void search_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     send_entries(clientSocket, queryResults, resultsCount);
 
     #if DEBUG
-        printf("resultsCount: %d", resultsCount);
+        printf("resultsCount: %d\n", resultsCount);
         print_all_entries(queryResults, resultsCount);
     #endif
 }
