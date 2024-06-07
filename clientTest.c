@@ -25,7 +25,7 @@ void handle_sigint(int sig);
 
 int main(){
     signal(SIGINT, handle_sigint);
-    clientSocket = init("1234");
+    clientSocket = init("0");
 
     choice_loop:
     printf("\nSelect an option:\n"
@@ -51,18 +51,18 @@ int main(){
         dataEntry testQuery = { "Mario", "","" };
         
         #if DEBUG
-        int j = 0;
-        while(j < 255)
-            printf("%c", testQuery.name[j++]);
-        printf("\n");
-        j = 0;
-        while(j < 255)
-            printf("%c", testQuery.address[j++]);
-        printf("\n");
-        j = 0;
-        while(j < 255)
-            printf("%c", testQuery.phoneNumber[j++]);
-        printf("\n");
+            int j = 0;
+            while(j < 255)
+                printf("%c", testQuery.name[j++]);
+            printf("\n");
+            j = 0;
+            while(j < 255)
+                printf("%c", testQuery.address[j++]);
+            printf("\n");
+            j = 0;
+            while(j < 255)
+                printf("%c", testQuery.phoneNumber[j++]);
+            printf("\n");
         #endif
 
         dataEntry results[10];
@@ -91,16 +91,25 @@ int main(){
         printf("Number: ");
         fgets(phoneNumber, MSG_LENGHT, stdin);
 
-        dataEntry newDataEntry;
-        strcpy(newDataEntry.name, rtrim(name));
-        strcpy(newDataEntry.address, rtrim(address));
-        strcpy(newDataEntry.phoneNumber, rtrim(phoneNumber));
+        dataEntry newEntry;
+        strcpy(newEntry.name, rtrim(name));
+        strcpy(newEntry.address, rtrim(address));
+        strcpy(newEntry.phoneNumber, rtrim(phoneNumber));
 
-        outcome = add_new_record(clientSocket, newDataEntry, errorMessage);
+        #if DEBUG
+            FILE *file = fopen("output.txt", "w");
+            if (file == NULL) return 1;
+            fprintf(file, "%s\n", newEntry.name);
+            fprintf(file, "%s\n", newEntry.address);
+            fprintf(file, "%s\n", newEntry.phoneNumber);
+            fclose(file);
+        #endif
+        
+        outcome = add_new_record(clientSocket, newEntry, errorMessage);
         if (outcome < 0) 
             printf("Request failed: %s\n", errorMessage);
         else 
-            (printf("Entry succesfully added\n"));
+            printf("Entry succesfully added\n");
 
         } break;
     case REMOVE_RECORD:{

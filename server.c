@@ -11,7 +11,7 @@
 #include "SocketUtilities.h"
 #include "DatabaseHandler.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #define ADMIN_PASSWORD "1234"
 
 void admin_loop(int clientSocket);
@@ -169,7 +169,6 @@ void admin_loop(int clientSocket) {
                 
                 printf("%d - Unexpected request\n\n", choice);
                 // NOTE S: The server doesn't handle the crashing of clients, sleeps just avoinds messy printing on the terminal
-                sleep(1);
                 break; 
         }
     }
