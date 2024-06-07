@@ -1,21 +1,24 @@
-
 #include <curses.h>
 #include <ncurses.h>
 #include <menu.h>
+#include <form.h>
+
 #include <stdlib.h>
 #include <string.h>
-#include <form.h>
+
 #include <stdio.h>
 
 
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/types.h>
+// #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+// #include <netinet/in.h>
 
-#include "DatabaseHandler.h"
-#include "SocketUtilities.h"
+// #include "DatabaseHandler.h"
+// #include "SocketUtilities.h"
+// #include "clientTest.c"
+#include "clientFunctions.h"
 
 #define MENU_CHOICES 6
 #define MAX_FIELD_LEN 30
@@ -373,34 +376,35 @@ int open_form_to_add_new_entry(int clientSocket) {
                 form_driver(my_form, REQ_VALIDATION);
 
                 // Retrieve field values
-                char *name = field_buffer(fields[0], 0);
-                char *phone = field_buffer(fields[1], 0);
-                char *email = field_buffer(fields[2], 0);
+                // char *name = field_buffer(fields[0], 0);
+                // char *phone = field_buffer(fields[1], 0);
+                // char *email = field_buffer(fields[2], 0);
 
                 dataEntry newDataEntry;
                 strncpy(newDataEntry.name, rtrim(field_buffer(fields[0], 0)), sizeof(newDataEntry.name) - 1);
                 strncpy(newDataEntry.address,rtrim(field_buffer(fields[1], 0)), sizeof(newDataEntry.address) - 1);
                 strncpy(newDataEntry.phoneNumber,rtrim(field_buffer(fields[2], 0)), sizeof(newDataEntry.phoneNumber) - 1);
 
-                sendDataEntry(clientSocket, &newDataEntry);
+                // sendDataEntry(clientSocket, &newDataEntry);
+                char errorMessage[MSG_LENGHT];
+                int outcome = add_new_record(clientSocket, newDataEntry, errorMessage);
 
-                int outcome = -1;
-                receive_signal(clientSocket, &outcome);
+                // receive_signal(clientSocket, &outcome);
                 if (outcome < 0) {
-                    char failureMsg[MSG_LENGHT];
-                    receiveMsg(clientSocket, failureMsg);
+                    // char failureMsg[MSG_LENGHT];
+                    // receiveMsg(clientSocket, failureMsg);
 
                     init_pair(2, COLOR_RED, COLOR_BLACK);
                     wattron(newEntryFormWindow, COLOR_PAIR(2));
 
-                    char footer[] = "Error: Invalid entry";
-                    mvwprintw(newEntryFormWindow, getmaxy(newEntryFormWindow)-2, (getmaxx(newEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
+                    // char footer[] = "Error: Invalid entry";
+                    mvwprintw(newEntryFormWindow, getmaxy(newEntryFormWindow)-2, (getmaxx(newEntryFormWindow) - strlen(errorMessage)) / 2, "%s", errorMessage);
                     
                     wattroff(newEntryFormWindow, COLOR_PAIR(2));
                 } else {
                     init_pair(2, COLOR_GREEN, COLOR_BLACK);
                     wattron(newEntryFormWindow, COLOR_PAIR(2));
-                    
+
                     char footer[] = "Entry succesfully added";
                     mvwprintw(newEntryFormWindow, getmaxy(newEntryFormWindow)-2, (getmaxx(newEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
                     
@@ -704,7 +708,7 @@ int open_form_to_edit_an_entry(int clientSocket){
                 strncpy(entryToEdit.phoneNumber,rtrim(field_buffer(fields[2], 0)), sizeof(entryToEdit.phoneNumber) - 1);
 
                 sendDataEntry(clientSocket, &entryToEdit);
-                
+
                 int outcome = -1;
                 receive_signal(clientSocket, &outcome);
                 if (outcome != 0) {
@@ -889,6 +893,19 @@ int loginFormWindow() {
 
     return 0; // Return status 0 for insertion cancelled
 }
+
+// A self evident util
+void fill_pad_with_entries(WINDOW *pad, dataEntry contacts[], int numContacts) {
+    for (int i = 0; i < numContacts; i++) {
+        wprintw(pad, "  # %d\n", i);
+        wprintw(pad, "  Name: %s\n", contacts[i].name);
+        wprintw(pad, "  Address: %s\n", contacts[i].address);
+        wprintw(pad, "  Phone Number: %s\n", contacts[i].phoneNumber);
+        wprintw(pad, "  ----------------------------------------\n");
+    }
+}
+
+void show_search_results(){};
 
 void server_option(int clientSocket, int option){
     int request = option;

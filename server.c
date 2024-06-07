@@ -504,12 +504,12 @@ void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entri
     send_signal(clientSocket, &outcome);
 
     if (outcome == -1) {
-        char errorMessage[MSG_LENGHT] = "Entry cannot be added: invalid entry\n";
+        char errorMessage[MSG_LENGHT] = "Invalid entry\n";
         printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
         sendMsg(clientSocket, errorMessage);
     }
     else if (outcome == -2) {
-        char errorMessage[MSG_LENGHT] = "Entry cannot be added: entry already present in the database\n";
+        char errorMessage[MSG_LENGHT] = "Entry already present\n";
         printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
         sendMsg(clientSocket, errorMessage);
     }

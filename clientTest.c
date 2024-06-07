@@ -1,14 +1,16 @@
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+// #include <unistd.h>
+// #include <sys/types.h>
+// #include <sys/socket.h>
+// #include <netinet/in.h>
 #include <string.h>
 #include <stdlib.h>
 #include <signal.h>
 
-#include "DatabaseHandler.h"
-#include "SocketUtilities.h"
+
+// #include "DatabaseHandler.h"
+// #include "SocketUtilities.h"
+#include "clientFunctions.h"
 
 #define DEBUG 1
 
@@ -16,16 +18,17 @@ static int clientSocket;
 static int busy = 0;
 static int logoutRequested = 0;
 
-int init(char password[]);
-int search_record(int clientSocket, dataEntry searchedEntry, dataEntry results[]);
-int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_LENGHT]);
-int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[MSG_LENGHT]);
-int receive_entries(int clientSocket);
-int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]);
-void logout(int clientSocket);
+// int init(char password[]);
+// int search_record(int clientSocket, dataEntry searchedEntry, dataEntry results[]);
+// int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_LENGHT]);
+// int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[MSG_LENGHT]);
+// int receive_entries(int clientSocket);
+// int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]);
+// void logout(int clientSocket);
 
 void handle_sigint(int sig);
 
+int init(char password[]);
 
 int main(){
     clientSocket = init("1234");
@@ -52,7 +55,7 @@ int main(){
     {
     case SEARCH_DB:{
         dataEntry testQuery = { "Mario", "","" };
-        
+
         #if DEBUG
         int j = 0;
         while(j < 255)
@@ -70,7 +73,7 @@ int main(){
 
         dataEntry results[10];
         int count = search_record(clientSocket, testQuery, results);
-        
+
         #if DEBUG
         printf("Total entries: %d\n\n", count);
         int i = 0;
@@ -100,9 +103,9 @@ int main(){
         strcpy(newDataEntry.phoneNumber, rtrim(phoneNumber));
 
         outcome = add_new_record(clientSocket, newDataEntry, errorMessage);
-        if (outcome < 0) 
+        if (outcome < 0)
             printf("Request failed: %s\n", errorMessage);
-        else 
+        else
             (printf("Entry succesfully added\n"));
 
         } break;
@@ -110,9 +113,9 @@ int main(){
         dataEntry testEntry = {"Mario Rossi", "", ""};
 
         outcome = delete_record(clientSocket, testEntry, errorMessage);
-        if (outcome < 0) 
+        if (outcome < 0)
             printf("Request failed: %s\n", errorMessage);
-        else 
+        else
             printf("%s succesfully removed from database\n", testEntry.name);
 
         } break;
@@ -121,7 +124,7 @@ int main(){
 
         dataEntry searchResults[10];
         int resultsCount = search_record(clientSocket, entryToEdit, searchResults);
-        
+
         #if DEBUG
             printf("\nresultCount == %d\nsearchResults[0]:\n",resultsCount);
             print_data_entry(searchResults[0]);
@@ -129,7 +132,7 @@ int main(){
 
         if (resultsCount == 1) {
             entryToEdit = searchResults[0];
-            
+
             #if DEBUG
                 printf("\nresultCount == %d\nAssignment to entryToEdit:\n",resultsCount);
                 print_data_entry(entryToEdit);
@@ -138,14 +141,14 @@ int main(){
             dataEntry editedEntry = {"Mario Draghi", "", ""};
             outcome = edit_record(clientSocket, entryToEdit, editedEntry, errorMessage);
 
-            if (outcome < 0) 
+            if (outcome < 0)
                 printf("Request failed.\n%s\n", errorMessage);
-            else 
+            else
                 printf("Entry succesfully edited\n");
         }
-        else if (resultsCount == 0) { 
+        else if (resultsCount == 0) {
             printf("Request failed: no results were found");
-        } 
+        }
         else {
             printf("Request failed: more than one results was found\n");
         }
@@ -156,11 +159,11 @@ int main(){
         break;
     default:
         printf("Invalid option selected, try again: \n");
-        
+
         break;
     }
-    
-    if (logoutRequested) 
+
+    if (logoutRequested)
         logout(clientSocket);
     else busy = 0;
 
@@ -168,7 +171,7 @@ int main(){
 }
 
 //Set password as 0 to authenticate as BASE
-//Returns client socket if succesful, -1 if failed 
+//Returns client socket if succesful, -1 if failed
 int init(char password[]) {
     signal(SIGINT, handle_sigint);
     clientSocket = create_client_socket(SERVER_IP, PORT);
@@ -183,87 +186,6 @@ int init(char password[]) {
     }
 
     return clientSocket;
-}
-
-// Return: the number of matching records found
-// Side-effect: Saves the entries found in the parameter results[]
-int search_record(int clientSocket, dataEntry searchedEntry, dataEntry results[]) {
-    int choice = SEARCH_DB;
-    send_signal(clientSocket, &choice);
-    sendDataEntry(clientSocket, &searchedEntry);
-
-    //Receive and parse the number of entries saved in the db
-    int entriesCount;
-    receive_signal(clientSocket, &entriesCount);
-
-    //Receive as many entries as present
-    int i = 0;
-    while (i < entriesCount) {
-        dataEntry receivedDataEntry;
-        receiveDataEntry(clientSocket, &receivedDataEntry);
-        results[i] = receivedDataEntry;
-        i++;
-    }
-
-    return entriesCount;
-}
-
-// Return: the outcome of the operation as an `int`  
-// outcome = -1 -> Invalid entry (Invalid characters or errors filling fields of the data entry)
-// outcome = -2 -> One or more records already match the whole "signature" of the query and as such is not valid
-// else         -> outcome contains the total number of entries that are now present 
-// Side-effect: If failure saves an error message to `errorMessage`
-int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_LENGHT]) {
-    int choice = ADD_RECORD;
-    send_signal(clientSocket, &choice);
-    sendDataEntry(clientSocket, &newEntry);
-
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    if (outcome < 0)
-        receiveMsg(clientSocket, errorMessage);
-
-    return outcome;
-}
-
-// Return: the outcome of the operation as an `int`  
-// outcome =  0 -> Successfull deletion
-// outcome = -1 -> No matching entries found
-// outcome = -2 -> More than one record already match the whole "signature" of the query, it should be exactly 1.
-// Side-effect: If failure saves an error message to `errorMessage`
-int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[MSG_LENGHT]) {
-    int choice = REMOVE_RECORD;
-    send_signal(clientSocket, &choice);
-    sendDataEntry(clientSocket, &entryToDelete);
-
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    if (outcome != 0)
-        receiveMsg(clientSocket, errorMessage);
-
-    return outcome;
-}
-
-int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]) {
-    int choice = EDIT_RECORD;
-    send_signal(clientSocket, &choice);
-
-    sendDataEntry(clientSocket, &entryToEdit);
-    sendDataEntry(clientSocket, &editedEntry);
-
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    if (outcome < 0)
-        receiveMsg(clientSocket, errorMessage);
-
-    return outcome;
-}
-
-void logout(int clientSocket) {
-    int logout = LOGOUT;
-    send_signal(clientSocket, &logout);
-    close(clientSocket);
-    exit(EXIT_SUCCESS);
 }
 
 void handle_sigint(int sig) {
