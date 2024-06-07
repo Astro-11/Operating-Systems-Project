@@ -10,7 +10,7 @@ server.o: server.c SocketUtilities.h
 clientTest: clientTest.o SocketUtilities.o ClientProcedures.o CommonUtils.o
 	gcc clientTest.c SocketUtilities.o ClientProcedures.o CommonUtils.o -o clientTest
 
-clientTest.o: clientTest.c SocketUtilities.h CommonUtils.h
+clientTest.o: clientTest.c CommonUtils.h
 	gcc -c clientTest.c
 
 
@@ -32,7 +32,7 @@ SocketUtilities.o: SocketUtilities.c SocketUtilities.h
 SocketUtilities.h: CommonDefines.h
 
 
-CommonUtils.o: CommonUtils.c CommonUtils.h CommonDefines.h
+CommonUtils.o: CommonUtils.c CommonUtils.h 
 	gcc -c CommonUtils.c
 
 CommonUtils.h: CommonDefines.h
@@ -43,6 +43,7 @@ tuiPrototype: tuiPrototype.c SocketUtilities.o DatabaseHandler.o CommonUtils.o C
 
 tui: tui.c SocketUtilities.o DatabaseHandler.o CommonUtils.o CommonDefines.h
 	gcc -o tui tui.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o CommonUtils.o
+
 
 clean:
 	rm *.o

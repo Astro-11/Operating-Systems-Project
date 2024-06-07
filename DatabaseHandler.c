@@ -92,11 +92,11 @@ int save_entry(dataEntry newDataEntry, FILE *filePointer) {
             print_data_entry(newDataEntry);
         #endif
         
-        return FALSE;
+        return -1;
     }
     sanitize_entry(&newDataEntry);
     fwrite(&newDataEntry, sizeof(dataEntry), 1, filePointer);
-    return TRUE;
+    return 0;
 }
 
 void readEntry(FILE *filePointer, dataEntry * readEntry) {
