@@ -1,21 +1,9 @@
+#include "CommonDefines.h"
+
 #ifndef DATABASE_HANDLER_H
 #define DATABASE_HANDLER_H
 
-#include <stdio.h>
-
-#define DATAENTRY_LENGHT sizeof(dataEntry)
-#define YELLOWPAGES_DB "YellowPage.data"
-#define TRUE 1
-#define FALSE 0
-
-typedef struct {
-    char name[256];
-    char address[256];
-    char phoneNumber[256];
-} dataEntry;
-
 void debug_populate_db();
-void print_data_entry(dataEntry entry);
 
 FILE * open_db_read();
 
@@ -40,8 +28,6 @@ int check_address(char address[]);
 
 int validate_entry(dataEntry entry);
 void sanitize_entry(dataEntry *entry);
-
-char* rtrim(char *str);
 
 int save_database_to_file(dataEntry *db, int db_size);
 

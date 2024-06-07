@@ -1,28 +1,48 @@
 all: clientTest server tuiPrototype tui
 
-server: server.o DatabaseHandler.o SocketUtilities.o
-	gcc server.o DatabaseHandler.o SocketUtilities.o -o server
+server: server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o
+	gcc server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o -o server
 
-server.o: server.c DatabaseHandler.h SocketUtilities.h
+server.o: server.c SocketUtilities.h
 	gcc -c server.c
+	
+
+clientTest: clientTest.o SocketUtilities.o ClientProcedures.o CommonUtils.o
+	gcc clientTest.c SocketUtilities.o ClientProcedures.o CommonUtils.o -o clientTest
+
+clientTest.o: clientTest.c SocketUtilities.h CommonUtils.h
+	gcc -c clientTest.c
+
+
+ClientProcedures.o: ClientProcedures.c ClientProcedures.h
+	gcc -c ClientProcedures.c
+
+ClientProcedures.h: CommonDefines.h
+
 
 DatabaseHandler.o: DatabaseHandler.c DatabaseHandler.h
 	gcc -c DatabaseHandler.c 
 
-SocketUtilities.o: SocketUtilities.c SocketUtilities.h DatabaseHandler.h
+DatabaseHandler.h: CommonDefines.h
+
+
+SocketUtilities.o: SocketUtilities.c SocketUtilities.h 
 	gcc -c SocketUtilities.c 
 
-clientTest: clientTest.o SocketUtilities.o DatabaseHandler.o
-	gcc clientTest.c SocketUtilities.o DatabaseHandler.o -o clientTest
+SocketUtilities.h: CommonDefines.h
 
-clientTest.o: clientTest.c SocketUtilities.h
-	gcc -c clientTest.c
 
-tuiPrototype: tuiPrototype.c SocketUtilities.o DatabaseHandler.o
-	gcc -o tuiPrototype tuiPrototype.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o
+CommonUtils.o: CommonUtils.c CommonUtils.h CommonDefines.h
+	gcc -c CommonUtils.c
 
-tui: tui.c SocketUtilities.o DatabaseHandler.o
-	gcc -o tui tui.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o
+CommonUtils.h: CommonDefines.h
+
+
+tuiPrototype: tuiPrototype.c SocketUtilities.o DatabaseHandler.o CommonUtils.o CommonDefines.h
+	gcc -o tuiPrototype tuiPrototype.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o CommonUtils.o
+
+tui: tui.c SocketUtilities.o DatabaseHandler.o CommonUtils.o CommonDefines.h
+	gcc -o tui tui.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o CommonUtils.o
 
 clean:
 	rm *.o

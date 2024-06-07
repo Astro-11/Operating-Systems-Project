@@ -1,7 +1,6 @@
-#include <sys/socket.h>
-#include "DatabaseHandler.h"
-
 #include "SocketUtilities.h"
+
+#include <sys/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

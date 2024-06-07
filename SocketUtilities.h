@@ -1,27 +1,7 @@
 #ifndef SOCKET_UTILS_H
 #define SOCKET_UTILS_H
 
-#include "DatabaseHandler.h"
-
-#define SERVER_IP "127.0.0.1"
-#define PORT 9890
-#define SIGNAL_LENGTH 4
-#define MSG_LENGHT 256
-
-#define ADMIN 0
-#define BASE 1
-
-#define ACCESS_GRANTED "ACCESS_GRANTED"
-#define ACCESS_DENIED "ACCESS_DENIED"
-
-typedef enum{
-    SEARCH_DB = 1,
-    ADD_RECORD,
-    REMOVE_RECORD,
-    EDIT_RECORD,
-    LOGOUT,
-} serverRequest;
-
+#include "CommonDefines.h"
 
 int receive_signal(int socket, int * buffer);
 int send_signal(int socket, int * buffer);
@@ -42,4 +22,4 @@ void no_login(int client_socket);
 
 int check_socket(int socket); 
 
-#endif // SOCKET_UTILS_H
+#endif 

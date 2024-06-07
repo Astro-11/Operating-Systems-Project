@@ -16,6 +16,7 @@
 
 #include "DatabaseHandler.h"
 #include "SocketUtilities.h"
+#include "CommonUtils.h"
 
 #define MENU_CHOICES 6
 #define MAX_FIELD_LEN 30

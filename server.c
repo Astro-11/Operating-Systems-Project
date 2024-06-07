@@ -7,8 +7,9 @@
 #include <netinet/in.h>
 #include <signal.h>
 
-#include "DatabaseHandler.h"
+#include "CommonUtils.h"
 #include "SocketUtilities.h"
+#include "DatabaseHandler.h"
 
 #define DEBUG 1
 #define ADMIN_PASSWORD "1234"
