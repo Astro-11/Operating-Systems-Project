@@ -1,12 +1,10 @@
 #include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <string.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 
+#include "ClientProcedures.h"
 #include "SocketUtilities.h"
 
 int init(char password[]);

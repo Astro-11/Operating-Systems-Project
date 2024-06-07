@@ -7,6 +7,7 @@
 #include "CommonUtils.h"
 
 void print_data_entry(dataEntry entry);
+void print_all_entries(dataEntry entries[], int entriesCount);
 int remove_all_whitespace(char str[]);
 int remove_extra_whitespace(char str[]);
 char* rtrim(char *str);
@@ -15,6 +16,26 @@ void print_data_entry(dataEntry entry) {
     printf("Name_________: %s\n", entry.name);
     printf("Address______: %s\n", entry.address);
     printf("Phone Number_: %s\n", entry.phoneNumber);
+}
+
+void print_all_entries(dataEntry entries[], int entriesCount) {
+    int i = 0;
+    while (i < entriesCount)
+        print_data_entry(entries[i++]);
+}
+
+//Returns 0 if matches, -1 otherwise
+int matches(dataEntry entry, dataEntry filter) {
+    if (strlen(filter.name) > 0 && strstr(entry.name, filter.name) == NULL) {
+        return -1;
+    }
+    if (strlen(filter.address) > 0 && strstr(entry.address, filter.address) == NULL) {
+        return -1;
+    }
+    if (strlen(filter.phoneNumber) > 0 && strstr(entry.phoneNumber, filter.phoneNumber) == NULL) {
+        return -1;
+    }
+    return 0;
 }
 
 //Removes whitespaces and /n

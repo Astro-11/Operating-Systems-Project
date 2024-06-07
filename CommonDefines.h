@@ -2,8 +2,6 @@
 #define COMMON_DEFINES_H
 
 #define YELLOWPAGES_DB "YellowPage.data"
-//#define TRUE 1
-//#define FALSE 0
 
 #define SERVER_IP "127.0.0.1"
 #define PORT 9890

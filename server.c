@@ -18,27 +18,24 @@ void admin_loop(int clientSocket);
 void user_loop(int clientSocket);
 
 int login_procedure(int clientSocket);
-void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entriesCount);
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
+void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entriesCount);
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void logout_procedure();
 
+int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]);
 int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEntry);
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete);
-int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]);
 int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, dataEntry editedEntry);
 
 int search_record_position(dataEntry entries[], int entriesCount, dataEntry query);
-int matches(dataEntry entry, dataEntry filter);
-void print_all_entries(dataEntry entries[], int entriesCount);
 void send_entries(int clientSocket, dataEntry entries[], int entriesCount);
 void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount);
+
 void handle_sigint(int sig);
 void handle_admin_death_signal(int sig);
 void handle_user_death_signal(int sig);
-// #################################################################################
-// #################################################################################
 
 /* 
  * This global variables are needed because it's not possible to 
@@ -260,6 +257,78 @@ int login_procedure(int clientSocket) {
     
 }
 
+void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
+    //Receive query
+    dataEntry query;
+    receiveDataEntry(clientSocket, &query);
+
+    printf("Received query:\n");
+    print_data_entry(query);
+                    
+    //Search for record
+    dataEntry queryResults[entriesCount];
+    int resultsCount = search_records(entries, entriesCount, query, queryResults);
+
+    send_entries(clientSocket, queryResults, resultsCount);
+
+    #if DEBUG
+        printf("resultsCount: %d\n", resultsCount);
+        print_all_entries(queryResults, resultsCount);
+    #endif
+}
+
+
+// Returns the number of matching records found
+// Saves as a side-effect the entries found in the parameter queryResults[]
+int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]) {
+    int resultsCount = 0;
+
+    for(int i = 0; i < entriesCount; i++)
+        if(matches(entries[i], query) == 0)
+            queryResults[resultsCount++] = entries[i];
+
+    return resultsCount;
+}
+
+void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entriesCount) {
+    dataEntry newDataEntry;
+    receiveDataEntry(clientSocket, &newDataEntry);
+
+    printf("Received record: \nName: %s\nAddress: %s\nNumber: %s \n\n", 
+        newDataEntry.name, 
+        newDataEntry.address, 
+        newDataEntry.phoneNumber);
+
+    int outcome = add_new_record(entries, entriesCount, newDataEntry);
+    send_signal(clientSocket, &outcome);
+
+    if (outcome == -1) {
+        char errorMessage[MSG_LENGHT] = "Invalid entry\n";
+        printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
+        sendMsg(clientSocket, errorMessage);
+    }
+    else if (outcome == -2) {
+        char errorMessage[MSG_LENGHT] = "Entry already present\n";
+        printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
+        sendMsg(clientSocket, errorMessage);
+    }
+    else printf("Record succesfully added, database now has %d entries\n", outcome);
+}
+
+//Returns the new entriesCount if succesful, -1 if newDataEntry is invalid, -2 if newDataEntry is already present in the db
+int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEntry) {
+    //NOTE A: At the moment we are validating and sanitizing every entry both when adding it to the runtimeDb and the actual db. 
+    //        Should we do it only once?
+    if (validate_entry(newDataEntry) < 0) 
+        return -1;
+    sanitize_entry(&newDataEntry);
+    if (search_record_position(entries, *entriesCount, newDataEntry) != -1) 
+        return -2;
+
+    entries[*entriesCount] = newDataEntry;
+    *entriesCount = *entriesCount + 1;
+    return *entriesCount;
+}
 
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
     dataEntry entryToDelete;
@@ -283,9 +352,6 @@ void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     //NOTE A: Should never happen?
     printf("Outcome %d - failed to remove record: %s\n", outcome, failureMessage);
 }
-
-    
-
 
 //Returns 0 if succesful, -1 if dataEntry not found, -2 if multiple dataEntries found
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete) {
@@ -434,38 +500,19 @@ int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, da
     print_data_entry(entries[position]);
 }
 
+void send_entries(int clientSocket, dataEntry entries[], int entriesCount) {
+    //Send to client the number of results
+    char countMsg[SIGNAL_LENGTH];
+    sprintf(countMsg, "%d", entriesCount);
+    send_signal(clientSocket, &entriesCount);
 
-void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
-    //Receive query
-    dataEntry query;
-    receiveDataEntry(clientSocket, &query);
-
-    printf("Received query:\n");
-    print_data_entry(query);
-                    
-    //Search for record
-    dataEntry queryResults[entriesCount];
-    int resultsCount = search_records(entries, entriesCount, query, queryResults);
-
-    send_entries(clientSocket, queryResults, resultsCount);
-
-    #if DEBUG
-        printf("resultsCount: %d\n", resultsCount);
-        print_all_entries(queryResults, resultsCount);
-    #endif
-}
-
-
-// Returns the number of matching records found
-// Saves as a side-effect the entries found in the parameter queryResults[]
-int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]) {
-    int resultsCount = 0;
-
-    for(int i = 0; i < entriesCount; i++)
-        if(matches(entries[i], query) == 0)
-            queryResults[resultsCount++] = entries[i];
-
-    return resultsCount;
+    //Send to client the results
+    int i = 0;
+    while (i < entriesCount) {
+        printf("Sending %s...\n", entries[i].name);
+        sendDataEntry(clientSocket, &entries[i]);
+        i++;
+    }
 }
 
 // Checks if an element of the `runtimeDatabase` matches our `query`
@@ -482,89 +529,6 @@ int search_record_position(dataEntry runtimeDatabase[], int entriesCount, dataEn
                 return -2;
         }
     return position;
-}
-
-/*int search_record_position(dataEntry entries[], int entriesCount, dataEntry query) {
-    for(int i = 0; i < entriesCount; i++) {
-        if(matches(entries[i], query) == 0) return i;
-    }
-    return -1;
-}*/
-
-
-void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entriesCount) {
-    dataEntry newDataEntry;
-    receiveDataEntry(clientSocket, &newDataEntry);
-
-    printf("Received record: \nName: %s\nAddress: %s\nNumber: %s \n\n", 
-        newDataEntry.name, 
-        newDataEntry.address, 
-        newDataEntry.phoneNumber);
-
-    int outcome = add_new_record(entries, entriesCount, newDataEntry);
-    send_signal(clientSocket, &outcome);
-
-    if (outcome == -1) {
-        char errorMessage[MSG_LENGHT] = "Invalid entry\n";
-        printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
-        sendMsg(clientSocket, errorMessage);
-    }
-    else if (outcome == -2) {
-        char errorMessage[MSG_LENGHT] = "Entry already present\n";
-        printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
-        sendMsg(clientSocket, errorMessage);
-    }
-    else printf("Record succesfully added, database now has %d entries\n", outcome);
-}
-
-//Returns the new entriesCount if succesful, -1 if newDataEntry is invalid, -2 if newDataEntry is already present in the db
-int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEntry) {
-    //NOTE A: At the moment we are validating and sanitizing every entry both when adding it to the runtimeDb and the actual db. 
-    //        Should we do it only once?
-    if (validate_entry(newDataEntry) < 0) 
-        return -1;
-    sanitize_entry(&newDataEntry);
-    if (search_record_position(entries, *entriesCount, newDataEntry) != -1) 
-        return -2;
-
-    entries[*entriesCount] = newDataEntry;
-    *entriesCount = *entriesCount + 1;
-    return *entriesCount;
-}
-
-void print_all_entries(dataEntry entries[], int entriesCount) {
-    int i = 0;
-    while (i < entriesCount)
-        print_data_entry(entries[i++]);
-}
-
-void send_entries(int clientSocket, dataEntry entries[], int entriesCount) {
-    //Send to client the number of results
-    char countMsg[SIGNAL_LENGTH];
-    sprintf(countMsg, "%d", entriesCount);
-    send_signal(clientSocket, &entriesCount);
-
-    //Send to client the results
-    int i = 0;
-    while (i < entriesCount) {
-        printf("Sending %s...\n", entries[i].name);
-        sendDataEntry(clientSocket, &entries[i]);
-        i++;
-    }
-}
-
-//Returns 0 if matches, -1 otherwise
-int matches(dataEntry entry, dataEntry filter) {
-    if (strlen(filter.name) > 0 && strstr(entry.name, filter.name) == NULL) {
-        return -1;
-    }
-    if (strlen(filter.address) > 0 && strstr(entry.address, filter.address) == NULL) {
-        return -1;
-    }
-    if (strlen(filter.phoneNumber) > 0 && strstr(entry.phoneNumber, filter.phoneNumber) == NULL) {
-        return -1;
-    }
-    return 0;
 }
 
 void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount) {

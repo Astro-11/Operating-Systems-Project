@@ -79,9 +79,7 @@ void close_db(FILE *filePointer) {
     if (errorCode == EOF) perror("Failed to close db: ");
 }
 
-//NOTE S: Given that it only saves the writing of two paramaters this may be an unneded abstraction
-//NOTE A: Given that it prevents me from saving with a wrong size, this is a needed abstraction
-//NOTE A: Also, we should include some validation.
+
 //Returns 0 if succesful, -1 if trying to save invalid dataEntry
 int save_entry(dataEntry newDataEntry, FILE *filePointer) {
     int out;
