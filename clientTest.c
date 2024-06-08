@@ -150,7 +150,7 @@ int main(){
 
         } break;
     case LOGOUT:
-        logout(clientSocket);
+        logout(clientSocket, 1);
         break;
     default:
         printf("Invalid option selected, try again: \n");
@@ -159,7 +159,7 @@ int main(){
     }
     
     if (logoutRequested) 
-        logout(clientSocket);
+        logout(clientSocket, 1);
     else busy = 0;
 
     goto choice_loop;
@@ -167,5 +167,5 @@ int main(){
 
 void handle_sigint(int sig) {
     if (busy) logoutRequested = 1;
-    else logout(clientSocket);
+    else logout(clientSocket, 1);
 }

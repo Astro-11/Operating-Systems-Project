@@ -11,6 +11,8 @@ tui: tui.c SocketUtilities.o DatabaseHandler.o CommonUtils.o ClientProcedures.o
 clientTest: clientTest.o SocketUtilities.o ClientProcedures.o CommonUtils.o
 	gcc clientTest.c SocketUtilities.o ClientProcedures.o CommonUtils.o -o clientTest
 
+# https://www.gnu.org/software/make/manual/html_node/Pattern-Examples.html
+# https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
 %.o: %.c $(HEADERS)
 	gcc -c $< -o $@
 
