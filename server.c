@@ -37,6 +37,8 @@ void handle_sigint(int sig);
 void handle_admin_death_signal(int sig);
 void handle_user_death_signal(int sig);
 
+void handle_errno(int errorCode, char* errorMessage);
+
 /* 
  * This global variables are needed because it's not possible to 
  * pass arguments to the function that handles SIGINT.
@@ -531,7 +533,7 @@ int search_record_position(dataEntry runtimeDatabase[], int entriesCount, dataEn
 }
 
 void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount) {
-    FILE * databasePointer = open_db_read();
+    FILE* databasePointer = open_db_read(handle_errno);
     *newRuntimeEntriesCount = countEntries(databasePointer, DATAENTRY_LENGHT);
 
     //NOTE A: for now we do not handle runtime overflow
@@ -545,7 +547,7 @@ void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEnt
     runtimeDatabase = placeholder;
 
     readEntries(databasePointer, runtimeDatabase);
-    close_db(databasePointer);
+    close_db(databasePointer, handle_errno);
 }
 
 //For all servers
@@ -559,7 +561,9 @@ void handle_sigint(int sig) {
     }
     //If Admin Server save db first, then die
     else if (adminOnline == 1) {
-        save_database_to_file(runtimeDatabase, runtimeEntriesCount);
+        FILE* db = open_db_write(handle_errno);
+        save_database_to_file(db, runtimeDatabase, runtimeEntriesCount);
+        close_db(db, handle_errno);
     }
 
     exit(EXIT_FAILURE); 
@@ -573,7 +577,11 @@ void logout_procedure() {
         //If admin then save to db and inform main server of your demise
         if (adminOnline == 1) {
             printf("Saving runtime database to file...\n");
-            save_database_to_file(runtimeDatabase, runtimeEntriesCount);
+
+            FILE* db = open_db_write(handle_errno);
+            save_database_to_file(db, runtimeDatabase, runtimeEntriesCount);
+            close_db(db, handle_errno);
+
             kill(mainServerPid, SIGUSR1);
             exit(EXIT_SUCCESS);
         }
@@ -607,3 +615,14 @@ void handle_user_death_signal(int sig) {
     if (usersOnline == 0) userServersGroupPid = 0; //Reset control group if no more users online
     printf("There are now %d users online\n", usersOnline);
 }
+
+//Error code 0 make uses of errno, negative error codes don't
+void handle_errno(int errorCode, char* errorMessage) {
+    if (errorCode == 0)
+        perror(errorMessage);
+    else
+        printf("Unexpected error %d - %s", errorCode, errorMessage);
+
+    kill(getpid(), SIGINT);
+}
+
