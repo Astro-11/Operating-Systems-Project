@@ -6,10 +6,8 @@
 #include "CommonUtils.h"
 
 #define DEBUG 1
-//Not used for now
-#define IS_READING 1
-#define IS_EDITING 2
-int dbStatus = 0;
+
+int save_entry(dataEntry newDataEntry, FILE *filePointer);
 
 void debug_populate_db() {
     dataEntry debugDatabase[] = {
@@ -53,65 +51,40 @@ void debug_populate_db() {
         save_entry(debugDatabase[i], db);
     }
 
-    close_db(db);
+    fclose(db);
 }
 
-FILE * open_db_read() {
+FILE * open_db_read(void (*f)(int errorCode, char* errorMessage)) {
     FILE *myFilePtr;
     myFilePtr = fopen(YELLOWPAGES_DB, "r");
-    if (myFilePtr == NULL) perror("Failed to open db: ");
+    if (myFilePtr == NULL) (*f)(0, "Failed to open database");
     return myFilePtr; 
 }
 
 //NOTE A: might be worth it to create at least one backup before overwriting the whole db
 //WARNING: OVERWRITES!
-FILE * open_db_write() {
+FILE * open_db_write(void (*f)(int errorCode, char* errorMessage)) {
     FILE *myFilePtr;
     //myFilePtr = fopen("YelloPageBackup.data", "r"); Copy into this before overwriting?
     myFilePtr = fopen(YELLOWPAGES_DB, "wb"); 
-    if (myFilePtr == NULL) perror("Failed to open db: ");
+    if (myFilePtr == NULL) (*f)(0, "Failed to open database");
     return myFilePtr;
 }
 
-void close_db(FILE *filePointer) {
+int close_db(FILE *filePointer, void (*f)(int errorCode, char* errorMessage)) {
     int errorCode;
     errorCode = fclose(filePointer);
-    if (errorCode == EOF) perror("Failed to close db: ");
-}
-
-
-//Returns 0 if succesful, -1 if trying to save invalid dataEntry
-int save_entry(dataEntry newDataEntry, FILE *filePointer) {
-    int out;
-    if ((out = validate_entry(newDataEntry)) != 0){
-        #if DEBUG
-            printf("-----------\n");
-            printf("Skipped %s. Invalid because of %d.\n", newDataEntry.name, out);
-            print_data_entry(newDataEntry);
-        #endif
-        
+    if (errorCode == EOF) {
+        (*f)(0, "Failed to close database");
         return -1;
     }
-    sanitize_entry(&newDataEntry);
-    fwrite(&newDataEntry, sizeof(dataEntry), 1, filePointer);
     return 0;
 }
 
-void readEntry(FILE *filePointer, dataEntry * readEntry) {
-    int readChars = 0;
-
-    readChars = fread(readEntry, sizeof(*readEntry), 1, filePointer);
-
-    #if DEBUG
-    printf("Nome: %s, Indirizzo: %s, Numero: %s \n", (*readEntry).name, (*readEntry).address, (*readEntry).phoneNumber);
-    printf("File is in position %ld \n", ftell(filePointer));
-    printf("Read chars: %d \n", readChars);
-    #endif
-}
-
+//Returns the number of entries found or -1 in case of error
 int countEntries(FILE *filePointer, int sizeOfEntry) {
     int startingPos = ftell(filePointer);
-    if (startingPos < 0) perror("Failed to save pointer inside of db: ");
+    if (startingPos < 0) return -1;
     rewind(filePointer);
 
     int entriesCount = 0;
@@ -124,13 +97,15 @@ int countEntries(FILE *filePointer, int sizeOfEntry) {
         entriesCount++;
     } 
 
-    fseek(filePointer, 0, startingPos);
+    int seekResult = fseek(filePointer, 0, startingPos);
+    if (seekResult < 0) return -1;
     return entriesCount;
 }
 
+//Returns the number of entries read or -1 in case of error
 int readEntries(FILE *filePointer, dataEntry dataEntries[]) {
     int startingPos = ftell(filePointer);
-    if (startingPos < 0) perror("Failed to save pointer inside of db: ");
+    if (startingPos < 0) return -1;
     rewind(filePointer);
 
     dataEntry readEntry;
@@ -143,21 +118,9 @@ int readEntries(FILE *filePointer, dataEntry dataEntries[]) {
         dataEntries[entriesCount++] = readEntry;
     }
 
-    fseek(filePointer, 0, startingPos); 
+    int seekResult = fseek(filePointer, 0, startingPos); 
+    if (seekResult < 0) return -1;
     return entriesCount;
-}
-
-void readEntireFile(FILE *filePointer) {
-    int currentPos = fseek(filePointer, 0, SEEK_SET);
-    if (currentPos != 0) perror("Failed to reset pointer inside of db: ");
-
-    char buffer[100];
-    int readChars = 0;
-
-    do {
-        readChars = fread(buffer, sizeof(buffer), 1, filePointer);
-        printf("%s\n", buffer);
-    } while (readChars <= 0);
 }
 
 int check_name(char name[]) {
@@ -234,17 +197,30 @@ void sanitize_entry(dataEntry *entry) {
 
 //NOTE A: the database IS the file. Referring to runtime dataEntry arrays as db might be confusing.
 //Returns the number of entries actually saved to db
-int save_database_to_file(dataEntry entries[], int entriesCount){
-    FILE* db = open_db_write();
-
+int save_database_to_file(FILE* filePointer, dataEntry entries[], int entriesCount) {
     int savedEntriesCount = 0;
     for(int i = 0; i < entriesCount; i++)
-        if (save_entry(entries[i], db))
+        if (save_entry(entries[i], filePointer))
             savedEntriesCount++;
-    
-    // if (fclose(db) == EOF) 
-    //     perror("Failed to close db: ");
 
-    close_db(db);
     return savedEntriesCount;
+}
+
+//Only local
+//Returns 0 if succesful, -1 if trying to save invalid dataEntry
+int save_entry(dataEntry newDataEntry, FILE *filePointer) {
+    int out;
+    if ((out = validate_entry(newDataEntry)) != 0){
+        #if DEBUG
+            printf("-----------\n");
+            printf("Skipped %s. Invalid because of %d.\n", newDataEntry.name, out);
+            print_data_entry(newDataEntry);
+        #endif
+        
+        return -1;
+    }
+    sanitize_entry(&newDataEntry);
+    if (fwrite(&newDataEntry, sizeof(dataEntry), 1, filePointer) != 1)
+        return -1;
+    return 0;
 }
