@@ -92,24 +92,26 @@ int main(){
 
         int pid = fork();
         if (pid == 0){
-             printf("Connection enstablished, awaiting user request. \n\n");
 
             if(clientType == BASE) {
                 adminOnline = 0;
-                //If userServersGroup not initialized give it the pid of the first user server
+
+                //If userServersGroup not initialized by main server give it the pid of the user server
                 if (userServersGroupPid == 0) 
                     userServersGroupPid = getpid(); 
                 
                 setpgid(getpid(), userServersGroupPid);
+                printf("Connection enstablished by user server %d (group %d), awaiting user request. \n\n", (int)getpid(), userServersGroupPid);
                 user_loop(clientSocket);
             }
             else if (clientType == ADMIN) {
+                printf("Connection enstablished by admin server %d, awaiting user request. \n\n", (int)getpid());
                 admin_loop(clientSocket);
             }
         } else {
-            printf("Closing connection with main server.\nCreated process %d to handle requests.\n\n", pid);
+            printf("Created process %d to handle requests.\n\n", pid);
             //If userServersGroup not initialized give it the pid of the first user server
-            if (userServersGroupPid == 0) 
+            if (userServersGroupPid == 0 && clientType == BASE) 
                 userServersGroupPid = pid;
             close(clientSocket);
         }
@@ -238,21 +240,22 @@ int login_procedure(int clientSocket) {
     receiveMsg(clientSocket, submittedPassword);
 
     if (strcmp(submittedPassword, ADMIN_PASSWORD) != 0){
-        char * ao = "Wrong password nigga!\n";
-        sendMsg(clientSocket, ao);
+        char serverResponse[MSG_LENGHT] = ACCESS_DENIED;
+        sendMsg(clientSocket, serverResponse);
         close(clientSocket);
-        printf("Someone attemted to login with wrong credentials.\nACCESS DENIED.\n");
+        printf("Someone attempted to login with wrong credentials.\nACCESS DENIED.\n");
         return -1;
     }
     if (adminOnline == 1){
-        char * ao = "Already online nigga!\n";
-        sendMsg(clientSocket, ao);
+        char serverResponse[MSG_LENGHT] = ACCESS_DENIED;
+        sendMsg(clientSocket, serverResponse);
         close(clientSocket);
         printf("An admin attempted to log in while privileges are already in use.\nACCESS DENIED.\n");
         return -1;
     }
     
-    sendMsg(clientSocket, ACCESS_GRANTED);
+    char serverResponse[MSG_LENGHT] = ACCESS_GRANTED;
+    sendMsg(clientSocket, serverResponse);
     printf("Admin access granted to a client.\n");
     return ADMIN;
     
@@ -557,7 +560,7 @@ void handle_sigint(int sig) {
     //If Main Server kill all User Servers first, then die
     if (mainServerPid == getpid()) {
         printf("Sending SIGINT signal to user server group %d\n", (int)(userServersGroupPid));
-        if (userServersGroupPid != 0) kill(userServersGroupPid, SIGINT);
+        if (userServersGroupPid != 0) killpg(userServersGroupPid, SIGINT);
     }
     //If Admin Server save db first, then die
     else if (adminOnline == 1) {
@@ -601,7 +604,8 @@ void handle_admin_death_signal(int sig){
     if (mainServerPid == getpid()) {
         adminOnline = 0;
         outdatedRuntimeDb = 1;
-        if (userServersGroupPid != 0) kill(userServersGroupPid, SIGUSR1);
+        if (userServersGroupPid != 0) killpg(userServersGroupPid, SIGUSR1);
+        printf("Sending signal to update database to user servers in group %d\n", userServersGroupPid);
         printf("There are now %d admins online\n", adminOnline);
     }
     //If child user server update db in next loop
