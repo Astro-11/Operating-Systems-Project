@@ -17,7 +17,7 @@ void handle_sigint(int sig);
 
 int main(){
     signal(SIGINT, handle_sigint);
-    clientSocket = init("0");
+    clientSocket = init("1234");
 
     choice_loop:
     printf("\nSelect an option:\n"
@@ -115,7 +115,7 @@ int main(){
 
         } break;
     case EDIT_RECORD:{
-        dataEntry entryToEdit = {"Mario Rossi", "", ""};
+        dataEntry entryToEdit = {"Mario Lezzi", "", ""};
 
         dataEntry searchResults[10];
         int resultsCount = search_record(clientSocket, entryToEdit, searchResults);
@@ -133,7 +133,7 @@ int main(){
                 print_data_entry(entryToEdit);
             #endif
 
-            dataEntry editedEntry = {"Mario Draghi", "", ""};
+            dataEntry editedEntry = {"Mario Rossi", "Via Roma 1, 00100 Roma", "0612345678"};
             outcome = edit_record(clientSocket, entryToEdit, editedEntry, errorMessage);
 
             if (outcome < 0) 
@@ -150,7 +150,7 @@ int main(){
 
         } break;
     case LOGOUT:
-        logout(clientSocket);
+        logout(clientSocket, 1);
         break;
     default:
         printf("Invalid option selected, try again: \n");
@@ -159,7 +159,7 @@ int main(){
     }
     
     if (logoutRequested) 
-        logout(clientSocket);
+        logout(clientSocket, 1);
     else busy = 0;
 
     goto choice_loop;
@@ -167,5 +167,5 @@ int main(){
 
 void handle_sigint(int sig) {
     if (busy) logoutRequested = 1;
-    else logout(clientSocket);
+    else logout(clientSocket, 1);
 }

@@ -60,7 +60,7 @@ int main(){
     mainServerPid = getpid();
     int serverSocket = create_server_socket(PORT);
 
-    // debug_populate_db();
+    debug_populate_db();
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
     printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
     
@@ -463,6 +463,11 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
         printf("Outcome %d: failed to edit record\n%s\n", outcome, errorMessage);
         sendMsg(clientSocket, errorMessage);
     }
+    else if (outcome == -3) {
+        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: a duplicated entry would be created\n";
+        printf("Outcome %d: failed to edit record\n%s\n", outcome, errorMessage);
+        sendMsg(clientSocket, errorMessage);
+    }
 }
 
 //Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
@@ -475,6 +480,12 @@ int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, da
     int position = search_record_position(entries, entriesCount, entryToEdit);
     if (position < 0) 
         return -1;
+
+    //Create backup 
+    dataEntry entryToEditBackupCopy;
+    strcpy(entryToEditBackupCopy.name, entries[position].name);
+    strcpy(entryToEditBackupCopy.address, entries[position].phoneNumber);
+    strcpy(entryToEditBackupCopy.phoneNumber, entries[position].phoneNumber);
 
     //Copy all the fields that are present in editedEntry
     int emptyEntry = 1;
@@ -498,7 +509,13 @@ int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, da
     }
     if (emptyEntry == 1) return -2;
 
-    //For now only prints name after success
+    //Check if the edit would cause duplication and revert changes in such case
+    int duplicationCheck = search_record_position(entries, entriesCount, entries[position]);
+    if (duplicationCheck < 0) {
+        entries[position] = entryToEditBackupCopy;
+        return -3;
+    }
+
     printf("Edit was a success:\n");
     print_data_entry(entries[position]);
 }
