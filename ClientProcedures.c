@@ -13,7 +13,7 @@ int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_L
 int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[MSG_LENGHT]);
 int receive_entries(int clientSocket);
 int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]);
-void logout(int clientSocket);
+void logout(int clientSocket, int request);
 
 //Set password as 0 to authenticate as BASE
 //Returns client socket if succesful, -1 if failed 
@@ -106,9 +106,11 @@ int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, 
     return outcome;
 }
 
-void logout(int clientSocket) {
+//Request should be 1 if wanting to save, 0 otherwise
+void logout(int clientSocket, int request) {
     int logout = LOGOUT;
     send_signal(clientSocket, &logout);
+    send_signal(clientSocket, &request);
     close(clientSocket);
     exit(EXIT_SUCCESS);
 }

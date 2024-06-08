@@ -239,7 +239,7 @@ int admin_client_routine(int clientSocket){
                         for (int i = 0; i < MENU_CHOICES; ++i)
                             free_item(menuItems[i]);
                         endwin();
-                        logout(clientSocket);
+                        logout(clientSocket, 1);
                         return 0;
                     }
                     // ### DEFAULT
@@ -305,7 +305,7 @@ int base_client_routine(int clientSocket){
     clear();
     refresh();
 
-    logout(clientSocket);
+    logout(clientSocket, 0);
 
     return 1;
 };

@@ -22,7 +22,7 @@ void search_record_procedure(int clientSocket, dataEntry entries[], int entriesC
 void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entriesCount);
 void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
 void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCount);
-void logout_procedure();
+void logout_procedure(int clientSocket);
 
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]);
 int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEntry);
@@ -160,7 +160,7 @@ void admin_loop(int clientSocket) {
 
             case LOGOUT: 
                 printf("%d - Logout attempt\n\n", choice);
-                logout_procedure();
+                logout_procedure(clientSocket);
                 close(clientSocket);
                 exit(EXIT_SUCCESS);
                 break;
@@ -203,7 +203,7 @@ void user_loop(int clientSocket) {
             case LOGOUT: 
                 errorCounter = 0;
                 printf("%d - Logout attempt\n\n", choice);
-                logout_procedure();
+                logout_procedure(clientSocket);
                 close(clientSocket);
                 exit(EXIT_SUCCESS);
                 break;
@@ -570,26 +570,28 @@ void handle_sigint(int sig) {
 }
 
 //For User Server and Admin Server
-void logout_procedure() {
-    // If child server 
-    // NOTE S: Can the parent server ever call this function?
-    if(mainServerPid != getpid()) {
-        //If admin then save to db and inform main server of your demise
-        if (adminOnline == 1) {
+void logout_procedure(int clientSocket) {
+    int request;
+    receive_signal(clientSocket, &request);
+
+    //If admin server
+    if (adminOnline == 1) {
+        //If received request to update database
+        if (request == 1) {
             printf("Saving runtime database to file...\n");
 
             FILE* db = open_db_write(handle_errno);
             save_database_to_file(db, runtimeDatabase, runtimeEntriesCount);
             close_db(db, handle_errno);
+        }
 
-            kill(mainServerPid, SIGUSR1);
-            exit(EXIT_SUCCESS);
-        }
-        //If user then only inform main server of your demise
-        else if (adminOnline == 0) {
-            kill(mainServerPid, SIGUSR2);
-            exit(EXIT_SUCCESS);
-        }
+        kill(mainServerPid, SIGUSR1);
+        exit(EXIT_SUCCESS);
+    }
+    //If user server
+    else if (adminOnline == 0) {
+        kill(mainServerPid, SIGUSR2);
+        exit(EXIT_SUCCESS);
     }
 }
 
