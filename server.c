@@ -60,8 +60,7 @@ int main(){
     mainServerPid = getpid();
     int serverSocket = create_server_socket(PORT);
 
-    debug_populate_db(); //WARNING: OVERWRITES!
-    //WARNING!!! runtimeEntriesCount needs to be incremented when admin adds new entry
+    // debug_populate_db();
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
     printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
     

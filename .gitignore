@@ -2,8 +2,6 @@
 *.o
 server
 clientTest
-tuiPrototype
 tui
-DatabaseHandler
 commitNotes.md
 YellowPage.data
