@@ -1,4 +1,5 @@
 #include "CommonDefines.h"
+#include <stdio.h>
 
 #ifndef DATABASE_HANDLER_H
 #define DATABASE_HANDLER_H

@@ -1,21 +1,14 @@
-
-#include <curses.h>
 #include <ncurses.h>
 #include <menu.h>
+#include <form.h>
+
 #include <stdlib.h>
 #include <string.h>
-#include <form.h>
-#include <stdio.h>
-
-
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-
-#include "DatabaseHandler.h"
-#include "SocketUtilities.h"
+// #include <stdio.h> // If we want to save to file
+// #include <unistd.h>
+// #include <sys/types.h>
+// #include <sys/socket.h>
+// #include <netinet/in.h>
 
 #include "ClientProcedures.h"
 #include "CommonUtils.h"
@@ -433,21 +426,6 @@ int open_form_to_search(int clientSocket) {
         touchwin(newEntryFormWindow);
         wrefresh(newEntryFormWindow);
     }
-
-    // ### If the submission is aborted send dummy data
-    char name[MSG_LENGHT] = "0";
-    char address[MSG_LENGHT] = "0";
-    char phoneNumber[MSG_LENGHT] = "0";
-
-    dataEntry newDataEntry;
-    strcpy(newDataEntry.name, name);
-    strcpy(newDataEntry.address,address);
-    strcpy(newDataEntry.phoneNumber, phoneNumber);
-
-    sendDataEntry(clientSocket, &newDataEntry);
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    
     // Clean up the form and window
     curs_set(0);
 
@@ -458,7 +436,7 @@ int open_form_to_search(int clientSocket) {
     delwin(newEntryFormWindow);
     endwin();
 
-    return 1; // Return status 0 for insertion cancelled
+    return 0; // Return status 0 for insertion cancelled
 }
 
 // Function to display a window with a form and save input to a file
@@ -585,21 +563,6 @@ int open_form_to_add_new_entry(int clientSocket) {
         touchwin(newEntryFormWindow);
         wrefresh(newEntryFormWindow);
     }
-
-    // ### If the submission is aborted send dummy data
-    char name[MSG_LENGHT] = "0";
-    char address[MSG_LENGHT] = "0";
-    char phoneNumber[MSG_LENGHT] = "0";
-
-    dataEntry newDataEntry;
-    strcpy(newDataEntry.name, name);
-    strcpy(newDataEntry.address,address);
-    strcpy(newDataEntry.phoneNumber, phoneNumber);
-
-    sendDataEntry(clientSocket, &newDataEntry);
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    
     // Clean up the form and window
     curs_set(0);
 
@@ -740,21 +703,6 @@ int open_form_to_delete_an_entry(int clientSocket){
         touchwin(deleteEntryFormWindow);
         wrefresh(deleteEntryFormWindow);
     }
-
-    // ### If the submission is aborted send dummy data
-    char name[MSG_LENGHT] = "0";
-    char address[MSG_LENGHT] = "0";
-    char phoneNumber[MSG_LENGHT] = "0";
-
-    dataEntry newDataEntry;
-    strcpy(newDataEntry.name, name);
-    strcpy(newDataEntry.address,address);
-    strcpy(newDataEntry.phoneNumber, phoneNumber);
-
-    sendDataEntry(clientSocket, &newDataEntry);
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    
     // Clean up the form and window
     curs_set(0);
 
@@ -953,21 +901,6 @@ int open_form_to_edit_an_entry(int clientSocket){
         touchwin(editEntryFormWindow);
         wrefresh(editEntryFormWindow);
     }
-
-    // ### If the submission is aborted send dummy data
-    char name[MSG_LENGHT] = "0";
-    char address[MSG_LENGHT] = "0";
-    char phoneNumber[MSG_LENGHT] = "0";
-
-    dataEntry newDataEntry;
-    strcpy(newDataEntry.name, name);
-    strcpy(newDataEntry.address,address);
-    strcpy(newDataEntry.phoneNumber, phoneNumber);
-
-    sendDataEntry(clientSocket, &newDataEntry);
-    int outcome;
-    receive_signal(clientSocket, &outcome);
-    
     // Clean up the form and window
     curs_set(0);
 
