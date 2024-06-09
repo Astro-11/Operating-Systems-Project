@@ -20,7 +20,7 @@
 #define DEBUG 1
 
 int admin_client_routine(int client_socket);
-int base_client_routine(int client_socket);
+void base_client_routine(int client_socket);
 
 int open_form_to_search(int clientSocket);
 int open_form_to_add_new_entry(int clientSocket);
@@ -30,17 +30,17 @@ int open_form_to_edit_an_entry(int clientSocket);
 void fillPadWithContacts(WINDOW *pad, dataEntry results[], int totalResults);
 int show_entries_in_array(dataEntry results[], int totalResults);
 
-void handle_sigint(int sig);
+void admin_welcome();
+void assemble_admin_window(WINDOW *w, MENU* m);
+void user_welcome();
+void terminate_process(int sig);
 
 int client_socket;
+int logoutValue = 0;
 
 int main(int argc, char *argv[]) {
-    
-    // We create the connection and attempt to login if given a password
-    int userType = BASE; // <- used to choose the interface of the application
-    
+    int userType = BASE;
     char *password = "0";
-
     
     if (argc > 1) {
         userType = ADMIN;
@@ -50,21 +50,16 @@ int main(int argc, char *argv[]) {
     client_socket = init(password);
     if(client_socket < 0 ){
         printf( "\nACCESS DENIED.\n");
-        system("stty sane");
         return -1;
     }
 
-
-    signal(SIGINT, handle_sigint);
-    if ( userType == ADMIN ){
-        admin_client_routine(client_socket);
-    } else {
+    signal(SIGINT, terminate_process);
+    if ( userType == ADMIN )
+        logoutValue = admin_client_routine(client_socket);
+    else
         base_client_routine(client_socket);
-    }
-
-    system("stty sane");
-    system("clear");
-
+    
+    terminate_process(0);
 }
 
 int admin_client_routine(int clientSocket){
@@ -122,26 +117,11 @@ int admin_client_routine(int clientSocket){
     set_menu_win(adminMenu, adminMenuWindow);
     set_menu_sub(adminMenu, menuSubwin);
 
-    // Set up the menu (format and mark) and load it in the window (post)
+    // Set up the menu (format and mark) 
     set_menu_format(adminMenu, MENU_CHOICES, 1); 
     set_menu_mark(adminMenu, "");
-    post_menu(adminMenu);
-
-    // Print a title and border around the menu window  
-    box(adminMenuWindow, 0, 0);
-    char header[] = "YellowPages TUI client";
-    init_pair(1, COLOR_YELLOW, COLOR_BLACK); 
-    wattron(adminMenuWindow, COLOR_PAIR(1));
-    mvwprintw(adminMenuWindow, 2, (width - strlen(header)) / 2, "%s", header);
-    wattroff(adminMenuWindow, COLOR_PAIR(1));
     
-    // We print at the bottom of the screen a line with usefull info for the user
-    // This is not printed on `adminMenuWindow` but on ncurses `stdscr`
-    char * reminderText = "Press F1 to exit the program.";
-    mvprintw(LINES - 2, 3, "%s", reminderText);
-
-    refresh();                 // updates the visuals of stdscr
-    wrefresh(adminMenuWindow); // updates the visuals of `adminMenuWindow`
+    assemble_admin_window(adminMenuWindow, adminMenu);
 
     // ################################################################
     // ### Loop that handles the user input
@@ -155,126 +135,39 @@ int admin_client_routine(int clientSocket){
             case KEY_UP:
                 menu_driver(adminMenu, REQ_UP_ITEM);
                 break;
-            case 10: // Enter key
-                {
-                    char *selectedOption = (char *)item_userptr(current_item(adminMenu));
-                    
-                    // ### SEARCH THE DATABASE
-                    if (strcmp(selectedOption, "Search the database") == 0){
-                        
-                        clear();
-                        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-                        refresh();
-                        unpost_menu(adminMenu);
+            // Enter key
+            case 10: { 
+                char *selectedOption = (char *)item_userptr(current_item(adminMenu));
+                
+                admin_welcome();
+                unpost_menu(adminMenu);
 
-                        open_form_to_search(clientSocket);
-                        clear();
-                        refresh();
-                        
-                    }
-                    // ### ADD NEW ENTRY
-                    else if (strcmp(selectedOption, "Add new entry") == 0) {
-                        
-                        clear();
-                        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-                        refresh();
-                        unpost_menu(adminMenu);
-
-                        open_form_to_add_new_entry(clientSocket);
-                        clear();
-                        refresh();
-
-                    } 
-                    // ### EDIT ENTRY
-                    else if (strcmp(selectedOption, "Edit an entry") == 0) {
-                        
-                        clear();
-                        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-                        refresh();
-                        unpost_menu(adminMenu);
-
-                        open_form_to_edit_an_entry(clientSocket);
-                        clear();
-                        refresh();
-
-                    } 
-                    // ### REMOVE ENTRY
-                    else if (strcmp(selectedOption, "Remove an entry") == 0) {
-                        
-                        clear();
-                        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-                        refresh();
-                        unpost_menu(adminMenu);
-
-                        open_form_to_delete_an_entry(clientSocket);
-                        clear();
-                        refresh();
-
-                    } 
-                    // ### EXIT WITHOUT SAVING
-                    else if (strcmp(selectedOption, "Exit without saving") == 0) {
-                        
-                        unpost_menu(adminMenu);
-                        free_menu(adminMenu);
-                        for (int i = 0; i < MENU_CHOICES; ++i)
-                            free_item(menuItems[i]);
-                        endwin();
-                        logout(clientSocket, 0);
-                        return 0;
-
-                    } 
-                    // ### EXIT AND SAVE
-                    else if (strcmp(selectedOption, "Exit and save") == 0) {
-                        unpost_menu(adminMenu);
-                        free_menu(adminMenu);
-                        for (int i = 0; i < MENU_CHOICES; ++i)
-                            free_item(menuItems[i]);
-                        endwin();
-                        logout(clientSocket, 1);
-                        return 0;
-                    }
-                    // ### DEFAULT
-                    else {
-                        // Handle other menu choices here
-                        // wrefresh(my_menu_win);
-                        move(LINES - 4, 3);
-                        clrtoeol();
-                        printw("You selected: %s", selectedOption);
-                        refresh();
-                    }
-                }
-                break;
+                /* SEARCH THE DATABASE */
+                if (strcmp(selectedOption, "Search the database") == 0)
+                    open_form_to_search(clientSocket);
+                /* ADD NEW ENTRY */
+                else if (strcmp(selectedOption, "Add new entry") == 0)
+                    open_form_to_add_new_entry(clientSocket);
+                /* EDIT ENTRY */
+                else if (strcmp(selectedOption, "Edit an entry") == 0)
+                    open_form_to_edit_an_entry(clientSocket);
+                /* REMOVE ENTRY */
+                else if (strcmp(selectedOption, "Remove an entry") == 0)
+                    open_form_to_delete_an_entry(clientSocket);
+                /* EXIT AND SAVE */
+                else if (strcmp(selectedOption, "Exit and save") == 0)
+                    return 1;
+                /* EXIT WITHOUT SAVING */
+                else if (strcmp(selectedOption, "Exit without saving") == 0)
+                    return 0;
+            } break;
         }
-        
-        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-        refresh();
-        box(adminMenuWindow, 0, 0);
-        char header[] = "YellowPages TUI client";
-        wattron(adminMenuWindow, COLOR_PAIR(1));
-        mvwprintw(adminMenuWindow, 2, (width - strlen(header)) / 2, "%s", header);
-        wattroff(adminMenuWindow, COLOR_PAIR(1));
-        touchwin(adminMenuWindow);
-        post_menu(adminMenu); 
-        wrefresh(adminMenuWindow);
-    }
-
-    system("stty sane");
-    system("clear");
-    
-    // Clean up
-    unpost_menu(adminMenu);
-
-    if(adminMenu != NULL){
-        for (int i = 0; i < item_count(adminMenu); ++i)
-            free_item(menu_items(adminMenu)[i]);
-        free_menu(adminMenu);
-        endwin();
-    }
-    
+        assemble_admin_window(adminMenuWindow, adminMenu);  
+    } 
     return 0;
 };
 
-int base_client_routine(int clientSocket){
+void base_client_routine(int clientSocket){
 
     // ################################################################
     // ### Initialize ncurses and the options that we need for this interface
@@ -286,20 +179,12 @@ int base_client_routine(int clientSocket){
     keypad(stdscr, TRUE);
 
     do {
-    clear();
-    mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-    refresh();
+    user_welcome();
     open_form_to_search(clientSocket);
     mvprintw(LINES - 3, 3, "Press any key make another search.");
     mvprintw(LINES - 2, 3, "Press F1 to exit/go back.");
     }while (getch() != KEY_F(1));
-    
-    clear();
-    refresh();
 
-    logout(clientSocket, 0);
-
-    return 1;
 };
 
 int open_form_to_search(int clientSocket) {
@@ -316,7 +201,7 @@ int open_form_to_search(int clientSocket) {
 
     WINDOW *formWindow = newwin(height, width, starty, startx);
     box(formWindow, 0, 0);
-    char header[] = "Who are you looking for?:";
+    char header[] = "Who are you looking for?";
     mvwprintw(formWindow, 1, (width - strlen(header)) / 2, "%s", header);
     mvwprintw(formWindow, 3, 1, "%8s:","Name");
     mvwprintw(formWindow, 4, 1, "%8s:","Address");
@@ -988,10 +873,53 @@ void fillPadWithContacts(WINDOW *pad, dataEntry results[], int totalResults) {
     }
 }
 
-void handle_sigint(int sig) {
+void terminate_process(int sig) {
     endwin();
     system("stty sane");
     system("clear");
-    printf("TUI received a SIGINT\n");
-    logout(client_socket, 0);
+    logout(client_socket, logoutValue);
+}
+
+void assemble_admin_window(WINDOW *w, MENU* m){
+    
+    // load the menu in the window (post)
+    post_menu(m);
+
+    // Print a title and border around the menu window  
+    box(w, 0, 0);
+    char header[] = "YellowPages TUI client";
+    init_pair(1, COLOR_YELLOW, COLOR_BLACK); 
+    wattron(w, COLOR_PAIR(1));
+    mvwprintw(w, 2, (40 - strlen(header)) / 2, "%s", header);
+    wattroff(w, COLOR_PAIR(1));
+    
+    // We print at the bottom of the screen a line with usefull info for the user
+    // This is not printed on `adminMenuWindow` but on ncurses `stdscr`
+    admin_welcome();
+
+    wrefresh(w); // updates the visuals of `adminMenuWindow`
+}
+void admin_welcome(){
+    init_pair(1, COLOR_YELLOW, COLOR_BLACK); 
+
+    clear();
+    mvprintw(LINES - 3, 3, "Welcome to ");
+    attron(COLOR_PAIR(1));
+    printw("Yellowpages ");
+    attroff( COLOR_PAIR(1));
+    printw("Admin panel.");
+    mvprintw(LINES - 2, 3, "Press F1 to go back/exit.");
+    refresh();
+}
+void user_welcome(){
+    init_pair(1, COLOR_YELLOW, COLOR_BLACK); 
+
+    clear();
+    mvprintw(LINES - 3, 3, "Welcome to ");
+    attron(COLOR_PAIR(1));
+    printw("Yellowpages ");
+    attroff( COLOR_PAIR(1));
+    printw("User panel.");
+    mvprintw(LINES - 2, 3, "Press F1 to go back/exit.");
+    refresh();
 }
