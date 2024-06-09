@@ -2,13 +2,13 @@
 #include <menu.h>
 #include <form.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+
 // #include <stdio.h> // If we want to save to file
-// #include <unistd.h>
-// #include <sys/types.h>
-// #include <sys/socket.h>
-// #include <netinet/in.h>
+
 
 #include "ClientProcedures.h"
 #include "CommonUtils.h"
@@ -19,9 +19,8 @@
 
 #define DEBUG 1
 
-int loginFormWindow();
 int admin_client_routine(int client_socket);
-int base_client_routine(int client_socket);
+void base_client_routine(int client_socket);
 
 int open_form_to_search(int clientSocket);
 int open_form_to_add_new_entry(int clientSocket);
@@ -30,17 +29,18 @@ int open_form_to_edit_an_entry(int clientSocket);
 
 void fillPadWithContacts(WINDOW *pad, dataEntry results[], int totalResults);
 int show_entries_in_array(dataEntry results[], int totalResults);
-// void server_option(int clientSocket, int option);
 
+void admin_welcome();
+void assemble_admin_window(WINDOW *w, MENU* m);
+void user_welcome();
+void terminate_process(int sig);
 
+int client_socket;
+int logoutValue = 0;
 
 int main(int argc, char *argv[]) {
-    
-    // We create the connection and attempt to login if given a password
-    int userType = BASE; // <- used to choose the interface of the application
-    int client_socket;
+    int userType = BASE;
     char *password = "0";
-
     
     if (argc > 1) {
         userType = ADMIN;
@@ -53,15 +53,13 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    if ( userType == ADMIN ){
-        admin_client_routine(client_socket);
-    } else {
+    signal(SIGINT, terminate_process);
+    if ( userType == ADMIN )
+        logoutValue = admin_client_routine(client_socket);
+    else
         base_client_routine(client_socket);
-    }
-
-    system("stty sane");
-    system("clear");
-
+    
+    terminate_process(0);
 }
 
 int admin_client_routine(int clientSocket){
@@ -71,7 +69,7 @@ int admin_client_routine(int clientSocket){
 
     // ################################################################
     // ### Initialize ncurses and the options that we need for this interface
-    initscr(); 
+    initscr();
     cbreak();
     noecho();
     curs_set(0);
@@ -119,26 +117,11 @@ int admin_client_routine(int clientSocket){
     set_menu_win(adminMenu, adminMenuWindow);
     set_menu_sub(adminMenu, menuSubwin);
 
-    // Set up the menu (format and mark) and load it in the window (post)
+    // Set up the menu (format and mark) 
     set_menu_format(adminMenu, MENU_CHOICES, 1); 
     set_menu_mark(adminMenu, "");
-    post_menu(adminMenu);
-
-    // Print a title and border around the menu window  
-    box(adminMenuWindow, 0, 0);
-    char header[] = "YellowPages TUI client";
-    init_pair(1, COLOR_YELLOW, COLOR_BLACK); 
-    wattron(adminMenuWindow, COLOR_PAIR(1));
-    mvwprintw(adminMenuWindow, 2, (width - strlen(header)) / 2, "%s", header);
-    wattroff(adminMenuWindow, COLOR_PAIR(1));
     
-    // We print at the bottom of the screen a line with usefull info for the user
-    // This is not printed on `adminMenuWindow` but on ncurses `stdscr`
-    char * reminderText = "Press F1 to exit the program.";
-    mvprintw(LINES - 2, 3, "%s", reminderText);
-
-    refresh();                 // updates the visuals of stdscr
-    wrefresh(adminMenuWindow); // updates the visuals of `adminMenuWindow`
+    assemble_admin_window(adminMenuWindow, adminMenu);
 
     // ################################################################
     // ### Loop that handles the user input
@@ -152,131 +135,40 @@ int admin_client_routine(int clientSocket){
             case KEY_UP:
                 menu_driver(adminMenu, REQ_UP_ITEM);
                 break;
-            case 10: // Enter key
-                {
-                    char *selectedOption = (char *)item_userptr(current_item(adminMenu));
-                    
-                    // ### SEARCH THE DATABASE
-                    if (strcmp(selectedOption, "Search the database") == 0){
-                        
-                        clear();
-                        // mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-                        refresh();
-                        unpost_menu(adminMenu);
+            // Enter key
+            case 10: { 
+                char *selectedOption = (char *)item_userptr(current_item(adminMenu));
+                
+                admin_welcome();
+                unpost_menu(adminMenu);
 
-                        open_form_to_search(clientSocket);
-                        clear();
-                        refresh();
-
-                        // FILE *fp = fopen("searchOutput.txt", "w");
-                        //     if (fp != NULL) {
-                        //         fprintf(fp, "TUI          : %s\n", server_response);
-                        //         fprintf(fp, "----------------\n");
-                        //         fclose(fp);
-                        //     }
-                        
-                    }
-                    // ### ADD NEW ENTRY
-                    else if (strcmp(selectedOption, "Add new entry") == 0) {
-                        
-                        clear();
-                        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-                        refresh();
-                        unpost_menu(adminMenu);
-
-                        open_form_to_add_new_entry(clientSocket);
-                        clear();
-                        refresh();
-
-                    } 
-                    // ### EDIT ENTRY
-                    else if (strcmp(selectedOption, "Edit an entry") == 0) {
-                        
-                        clear();
-                        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-                        refresh();
-                        unpost_menu(adminMenu);
-
-                        open_form_to_edit_an_entry(clientSocket);
-                        clear();
-                        refresh();
-
-                    } 
-                    // ### REMOVE ENTRY
-                    else if (strcmp(selectedOption, "Remove an entry") == 0) {
-                        
-                        clear();
-                        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-                        refresh();
-                        unpost_menu(adminMenu);
-
-                        open_form_to_delete_an_entry(clientSocket);
-                        clear();
-                        refresh();
-
-                    } 
-                    // ### EXIT WITHOUT SAVING
-                    else if (strcmp(selectedOption, "Exit without saving") == 0) {
-                        
-                        // At the moment this is not a possibility
-                        // # # # # # # # # # # # # 
-                        // # # # # # # # # # # # # 
-                        // # # # # # # # # # # # # 
-                        // # # # # # # # # # # # # 
-
-                    } 
-                    // ### EXIT AND SAVE
-                    else if (strcmp(selectedOption, "Exit and save") == 0) {
-                        unpost_menu(adminMenu);
-                        free_menu(adminMenu);
-                        for (int i = 0; i < MENU_CHOICES; ++i)
-                            free_item(menuItems[i]);
-                        endwin();
-                        logout(clientSocket, 1);
-                        return 0;
-                    }
-                    // ### DEFAULT
-                    else {
-                        // Handle other menu choices here
-                        // wrefresh(my_menu_win);
-                        move(LINES - 4, 3);
-                        clrtoeol();
-                        printw("You selected: %s", selectedOption);
-                        refresh();
-                    }
-                }
-                break;
+                /* SEARCH THE DATABASE */
+                if (strcmp(selectedOption, "Search the database") == 0)
+                    open_form_to_search(clientSocket);
+                /* ADD NEW ENTRY */
+                else if (strcmp(selectedOption, "Add new entry") == 0)
+                    open_form_to_add_new_entry(clientSocket);
+                /* EDIT ENTRY */
+                else if (strcmp(selectedOption, "Edit an entry") == 0)
+                    open_form_to_edit_an_entry(clientSocket);
+                /* REMOVE ENTRY */
+                else if (strcmp(selectedOption, "Remove an entry") == 0)
+                    open_form_to_delete_an_entry(clientSocket);
+                /* EXIT AND SAVE */
+                else if (strcmp(selectedOption, "Exit and save") == 0)
+                    return 1;
+                /* EXIT WITHOUT SAVING */
+                else if (strcmp(selectedOption, "Exit without saving") == 0)
+                    return 0;
+            } break;
         }
-        
-        mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-        refresh();
-        box(adminMenuWindow, 0, 0);
-        char header[] = "YellowPages TUI client";
-        wattron(adminMenuWindow, COLOR_PAIR(1));
-        mvwprintw(adminMenuWindow, 2, (width - strlen(header)) / 2, "%s", header);
-        wattroff(adminMenuWindow, COLOR_PAIR(1));
-        touchwin(adminMenuWindow);
-        post_menu(adminMenu); 
-        wrefresh(adminMenuWindow);
-    }
-
-    system("stty sane");
-    system("clear");
-    
-    // Clean up
-    unpost_menu(adminMenu);
-
-    if(adminMenu != NULL){
-        for (int i = 0; i < item_count(adminMenu); ++i)
-            free_item(menu_items(adminMenu)[i]);
-        free_menu(adminMenu);
-        endwin();
-    }
-    
+        assemble_admin_window(adminMenuWindow, adminMenu);  
+    } 
     return 0;
 };
 
-int base_client_routine(int clientSocket){
+void base_client_routine(int clientSocket){
+
     // ################################################################
     // ### Initialize ncurses and the options that we need for this interface
     initscr(); 
@@ -287,20 +179,12 @@ int base_client_routine(int clientSocket){
     keypad(stdscr, TRUE);
 
     do {
-    clear();
-    mvprintw(LINES - 2, 3, "Press F1 to exit the program.");
-    refresh();
+    user_welcome();
     open_form_to_search(clientSocket);
     mvprintw(LINES - 3, 3, "Press any key make another search.");
     mvprintw(LINES - 2, 3, "Press F1 to exit/go back.");
     }while (getch() != KEY_F(1));
-    
-    clear();
-    refresh();
 
-    logout(clientSocket, 0);
-
-    return 1;
 };
 
 int open_form_to_search(int clientSocket) {
@@ -315,13 +199,13 @@ int open_form_to_search(int clientSocket) {
     int starty = (LINES - height) / 2; // Center the window vertically
     int startx = (COLS - width) / 2;   // Center the window horizontally
 
-    WINDOW *newEntryFormWindow = newwin(height, width, starty, startx);
-    box(newEntryFormWindow, 0, 0);
-    char header[] = "Who are you looking for?:";
-    mvwprintw(newEntryFormWindow, 1, (width - strlen(header)) / 2, "%s", header);
-    mvwprintw(newEntryFormWindow, 3, 1, "%8s:","Name");
-    mvwprintw(newEntryFormWindow, 4, 1, "%8s:","Address");
-    mvwprintw(newEntryFormWindow, 5, 1, "%8s:","Phone");
+    WINDOW *formWindow = newwin(height, width, starty, startx);
+    box(formWindow, 0, 0);
+    char header[] = "Who are you looking for?";
+    mvwprintw(formWindow, 1, (width - strlen(header)) / 2, "%s", header);
+    mvwprintw(formWindow, 3, 1, "%8s:","Name");
+    mvwprintw(formWindow, 4, 1, "%8s:","Address");
+    mvwprintw(formWindow, 5, 1, "%8s:","Phone");
 
     // Create form fields
     FIELD *fields[4];
@@ -339,16 +223,16 @@ int open_form_to_search(int clientSocket) {
 
     // Create the form
     FORM *my_form = new_form(fields);
-    set_form_win(my_form, newEntryFormWindow);
+    set_form_win(my_form, formWindow);
 
     scale_form(my_form, &height, &width);
 
-    WINDOW* formSubWin = derwin(newEntryFormWindow, height, width, 3, 9);
+    WINDOW* formSubWin = derwin(formWindow, height, width, 3, 9);
     set_form_sub(my_form, formSubWin);
     post_form(my_form);
 
-    keypad(newEntryFormWindow, TRUE);
-    wrefresh(newEntryFormWindow);
+    keypad(formWindow, TRUE);
+    wrefresh(formWindow);
 
     int ch;
     while ((ch = getch()) != KEY_F(1)) {
@@ -394,11 +278,11 @@ int open_form_to_search(int clientSocket) {
 
                 if (outcome <= 0) {
                     init_pair(2, COLOR_RED, COLOR_BLACK);
-                    wattron(newEntryFormWindow, COLOR_PAIR(2));
+                    wattron(formWindow, COLOR_PAIR(2));
                     char footer[] = "No entry matches the search";
-                    mvwprintw(newEntryFormWindow, getmaxy(newEntryFormWindow)-2, (getmaxx(newEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
-                    wattroff(newEntryFormWindow, COLOR_PAIR(2));
-                    wrefresh(newEntryFormWindow);
+                    mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(footer)) / 2, "%s", footer);
+                    wattroff(formWindow, COLOR_PAIR(2));
+                    wrefresh(formWindow);
                     getch();
                 }
                 
@@ -409,7 +293,7 @@ int open_form_to_search(int clientSocket) {
                 free_form(my_form);
                 free_field(fields[0]);
                 free_field(fields[1]);
-                delwin(newEntryFormWindow);
+                delwin(formWindow);
                 endwin();
 
                 if(outcome > 0){
@@ -423,8 +307,8 @@ int open_form_to_search(int clientSocket) {
                 form_driver(my_form, ch);
                 break;
         }
-        touchwin(newEntryFormWindow);
-        wrefresh(newEntryFormWindow);
+        touchwin(formWindow);
+        wrefresh(formWindow);
     }
     // Clean up the form and window
     curs_set(0);
@@ -433,7 +317,7 @@ int open_form_to_search(int clientSocket) {
     free_form(my_form);
     free_field(fields[0]);
     free_field(fields[1]);
-    delwin(newEntryFormWindow);
+    delwin(formWindow);
     endwin();
 
     return 0; // Return status 0 for insertion cancelled
@@ -452,13 +336,13 @@ int open_form_to_add_new_entry(int clientSocket) {
     int starty = (LINES - height) / 2; // Center the window vertically
     int startx = (COLS - width) / 2;   // Center the window horizontally
 
-    WINDOW *newEntryFormWindow = newwin(height, width, starty, startx);
-    box(newEntryFormWindow, 0, 0);
+    WINDOW *formWindow = newwin(height, width, starty, startx);
+    box(formWindow, 0, 0);
     char header[] = "Please submit the new entry:";
-    mvwprintw(newEntryFormWindow, 1, (width - strlen(header)) / 2, "%s", header);
-    mvwprintw(newEntryFormWindow, 3, 1, "%8s:","Name");
-    mvwprintw(newEntryFormWindow, 4, 1, "%8s:","Address");
-    mvwprintw(newEntryFormWindow, 5, 1, "%8s:","Phone");
+    mvwprintw(formWindow, 1, (width - strlen(header)) / 2, "%s", header);
+    mvwprintw(formWindow, 3, 1, "%8s:","Name");
+    mvwprintw(formWindow, 4, 1, "%8s:","Address");
+    mvwprintw(formWindow, 5, 1, "%8s:","Phone");
 
     // Create form fields
     FIELD *fields[4];
@@ -476,16 +360,16 @@ int open_form_to_add_new_entry(int clientSocket) {
 
     // Create the form
     FORM *my_form = new_form(fields);
-    set_form_win(my_form, newEntryFormWindow);
+    set_form_win(my_form, formWindow);
 
     scale_form(my_form, &height, &width);
 
-    WINDOW* formSubWin = derwin(newEntryFormWindow, height, width, 3, 9);
+    WINDOW* formSubWin = derwin(formWindow, height, width, 3, 9);
     set_form_sub(my_form, formSubWin);
     post_form(my_form);
 
-    keypad(newEntryFormWindow, TRUE);
-    wrefresh(newEntryFormWindow);
+    keypad(formWindow, TRUE);
+    wrefresh(formWindow);
 
     int ch;
     while ((ch = getch()) != KEY_F(1)) {
@@ -532,17 +416,17 @@ int open_form_to_add_new_entry(int clientSocket) {
 
                 if (outcome < 0) {
                     init_pair(2, COLOR_RED, COLOR_BLACK);
-                    wattron(newEntryFormWindow, COLOR_PAIR(2));
-                    mvwprintw(newEntryFormWindow, getmaxy(newEntryFormWindow)-2, (getmaxx(newEntryFormWindow) - strlen(errorMessage)) / 2, "%s", errorMessage);
-                    wattroff(newEntryFormWindow, COLOR_PAIR(2));
+                    wattron(formWindow, COLOR_PAIR(2));
+                    mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(errorMessage)) / 2, "%s", errorMessage);
+                    wattroff(formWindow, COLOR_PAIR(2));
                 } else {
                     init_pair(2, COLOR_GREEN, COLOR_BLACK);
-                    wattron(newEntryFormWindow, COLOR_PAIR(2));
+                    wattron(formWindow, COLOR_PAIR(2));
                     char footer[] = "Entry succesfully added";
-                    mvwprintw(newEntryFormWindow, getmaxy(newEntryFormWindow)-2, (getmaxx(newEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
-                    wattroff(newEntryFormWindow, COLOR_PAIR(2));
+                    mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(footer)) / 2, "%s", footer);
+                    wattroff(formWindow, COLOR_PAIR(2));
                 }
-                wrefresh(newEntryFormWindow);
+                wrefresh(formWindow);
                 getch();
 
                 // Clean up the form and window
@@ -552,7 +436,7 @@ int open_form_to_add_new_entry(int clientSocket) {
                 free_form(my_form);
                 free_field(fields[0]);
                 free_field(fields[1]);
-                delwin(newEntryFormWindow);
+                delwin(formWindow);
                 endwin();
 
                 return 1; // Return status 1 for successful insertion
@@ -560,8 +444,8 @@ int open_form_to_add_new_entry(int clientSocket) {
                 form_driver(my_form, ch);
                 break;
         }
-        touchwin(newEntryFormWindow);
-        wrefresh(newEntryFormWindow);
+        touchwin(formWindow);
+        wrefresh(formWindow);
     }
     // Clean up the form and window
     curs_set(0);
@@ -570,7 +454,7 @@ int open_form_to_add_new_entry(int clientSocket) {
     free_form(my_form);
     free_field(fields[0]);
     free_field(fields[1]);
-    delwin(newEntryFormWindow);
+    delwin(formWindow);
     endwin();
 
     return 1; // Return status 0 for insertion cancelled
@@ -587,17 +471,17 @@ int open_form_to_delete_an_entry(int clientSocket){
     int starty = (LINES - height) / 2; // Center the window vertically
     int startx = (COLS - width) / 2;   // Center the window horizontally
 
-    WINDOW *deleteEntryFormWindow = newwin(height, width, starty, startx);
-    box(deleteEntryFormWindow, 0, 0);
+    WINDOW *formWindow = newwin(height, width, starty, startx);
+    box(formWindow, 0, 0);
     char header[] = "!!! Define UNIVOCALLY the entry to DELETE !!!";
     init_pair(3, COLOR_RED, COLOR_BLACK);
-    wattron(deleteEntryFormWindow, COLOR_PAIR(3));
-    mvwprintw(deleteEntryFormWindow, 1, (width - strlen(header)) / 2, "%s", header);
-    wattroff(deleteEntryFormWindow, COLOR_PAIR(3));
+    wattron(formWindow, COLOR_PAIR(3));
+    mvwprintw(formWindow, 1, (width - strlen(header)) / 2, "%s", header);
+    wattroff(formWindow, COLOR_PAIR(3));
 
-    mvwprintw(deleteEntryFormWindow, 3, 1, "%8s:","Name");
-    mvwprintw(deleteEntryFormWindow, 4, 1, "%8s:","Address");
-    mvwprintw(deleteEntryFormWindow, 5, 1, "%8s:","Phone");
+    mvwprintw(formWindow, 3, 1, "%8s:","Name");
+    mvwprintw(formWindow, 4, 1, "%8s:","Address");
+    mvwprintw(formWindow, 5, 1, "%8s:","Phone");
 
     // Create form fields
     FIELD *fields[4];
@@ -615,16 +499,16 @@ int open_form_to_delete_an_entry(int clientSocket){
 
     // Create the form
     FORM *my_form = new_form(fields);
-    set_form_win(my_form, deleteEntryFormWindow);
+    set_form_win(my_form, formWindow);
 
     scale_form(my_form, &height, &width);
 
-    WINDOW* formSubWin = derwin(deleteEntryFormWindow, height, width, 3, 9);
+    WINDOW* formSubWin = derwin(formWindow, height, width, 3, 9);
     set_form_sub(my_form, formSubWin);
     post_form(my_form);
 
-    keypad(deleteEntryFormWindow, TRUE);
-    wrefresh(deleteEntryFormWindow);
+    keypad(formWindow, TRUE);
+    wrefresh(formWindow);
 
     int ch;
     while ((ch = getch()) != KEY_F(1)) {
@@ -671,17 +555,17 @@ int open_form_to_delete_an_entry(int clientSocket){
 
                 if (outcome < 0) {
                     init_pair(2, COLOR_RED, COLOR_BLACK);
-                    wattron(deleteEntryFormWindow, COLOR_PAIR(2));
-                    mvwprintw(deleteEntryFormWindow, getmaxy(deleteEntryFormWindow)-2, (getmaxx(deleteEntryFormWindow) - strlen(errorMessage)) / 2, "%s", errorMessage);
-                    wattroff(deleteEntryFormWindow, COLOR_PAIR(2));
+                    wattron(formWindow, COLOR_PAIR(2));
+                    mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(errorMessage)) / 2, "%s", errorMessage);
+                    wattroff(formWindow, COLOR_PAIR(2));
                 } else {
                     init_pair(2, COLOR_GREEN, COLOR_BLACK);
-                    wattron(deleteEntryFormWindow, COLOR_PAIR(2));
+                    wattron(formWindow, COLOR_PAIR(2));
                     char footer[] = "Entry succesfully removed";
-                    mvwprintw(deleteEntryFormWindow, getmaxy(deleteEntryFormWindow)-2, (getmaxx(deleteEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
-                    wattroff(deleteEntryFormWindow, COLOR_PAIR(2));
+                    mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(footer)) / 2, "%s", footer);
+                    wattroff(formWindow, COLOR_PAIR(2));
                 }
-                wrefresh(deleteEntryFormWindow);
+                wrefresh(formWindow);
                 getch();
 
 
@@ -692,7 +576,7 @@ int open_form_to_delete_an_entry(int clientSocket){
                 free_form(my_form);
                 free_field(fields[0]);
                 free_field(fields[1]);
-                delwin(deleteEntryFormWindow);
+                delwin(formWindow);
                 endwin();
 
                 return 1; // Return status 1 for successful insertion
@@ -700,8 +584,8 @@ int open_form_to_delete_an_entry(int clientSocket){
                 form_driver(my_form, ch);
                 break;
         }
-        touchwin(deleteEntryFormWindow);
-        wrefresh(deleteEntryFormWindow);
+        touchwin(formWindow);
+        wrefresh(formWindow);
     }
     // Clean up the form and window
     curs_set(0);
@@ -710,7 +594,7 @@ int open_form_to_delete_an_entry(int clientSocket){
     free_form(my_form);
     free_field(fields[0]);
     free_field(fields[1]);
-    delwin(deleteEntryFormWindow);
+    delwin(formWindow);
     endwin();
 
     return 1; // Return status 0 for insertion cancelled
@@ -718,8 +602,7 @@ int open_form_to_delete_an_entry(int clientSocket){
 
 int open_form_to_edit_an_entry(int clientSocket){
     
-    curs_set(1); // Turns the cursor visibility on
-    // server_option(clientSocket, EDIT_RECORD);
+    curs_set(1);
 
     // Create a new window for the form
     // Calculate window dimensions and positions
@@ -729,17 +612,17 @@ int open_form_to_edit_an_entry(int clientSocket){
     int starty = (LINES - height) / 2; // Center the window vertically
     int startx = (COLS - width) / 2;   // Center the window horizontally
 
-    WINDOW *editEntryFormWindow = newwin(height, width, starty, startx);
-    box(editEntryFormWindow, 0, 0);
+    WINDOW *formWindow = newwin(height, width, starty, startx);
+    box(formWindow, 0, 0);
     init_pair(3, COLOR_MAGENTA, COLOR_BLACK);
-    wattron(editEntryFormWindow, COLOR_PAIR(3));
+    wattron(formWindow, COLOR_PAIR(3));
     char header[] = "!!! Define UNIVOCALLY the entry to EDIT !!!";
-    wattroff(editEntryFormWindow, COLOR_PAIR(3));
+    wattroff(formWindow, COLOR_PAIR(3));
 
-    mvwprintw(editEntryFormWindow, 1, (width - strlen(header)) / 2, "%s", header);
-    mvwprintw(editEntryFormWindow, 3, 1, "%8s:","Name");
-    mvwprintw(editEntryFormWindow, 4, 1, "%8s:","Address");
-    mvwprintw(editEntryFormWindow, 5, 1, "%8s:","Phone");
+    mvwprintw(formWindow, 1, (width - strlen(header)) / 2, "%s", header);
+    mvwprintw(formWindow, 3, 1, "%8s:","Name");
+    mvwprintw(formWindow, 4, 1, "%8s:","Address");
+    mvwprintw(formWindow, 5, 1, "%8s:","Phone");
 
     // Create form fields
     FIELD *fields[4];
@@ -757,16 +640,16 @@ int open_form_to_edit_an_entry(int clientSocket){
 
     // Create the form
     FORM *my_form = new_form(fields);
-    set_form_win(my_form, editEntryFormWindow);
+    set_form_win(my_form, formWindow);
 
     scale_form(my_form, &height, &width);
 
-    WINDOW* formSubWin = derwin(editEntryFormWindow, height, width, 3, 9);
+    WINDOW* formSubWin = derwin(formWindow, height, width, 3, 9);
     set_form_sub(my_form, formSubWin);
     post_form(my_form);
 
-    keypad(editEntryFormWindow, TRUE);
-    wrefresh(editEntryFormWindow);
+    keypad(formWindow, TRUE);
+    wrefresh(formWindow);
 
     int search = 1;
     dataEntry results[1];
@@ -815,76 +698,80 @@ int open_form_to_edit_an_entry(int clientSocket){
 
                     if (outcome == 1) {
                         init_pair(2, COLOR_GREEN, COLOR_BLACK);
-                        wattron(editEntryFormWindow, COLOR_PAIR(2));
+                        wattron(formWindow, COLOR_PAIR(2));
                         char footer[] = "Entry succesfully selected, can edit";
-                        mvwprintw(editEntryFormWindow, getmaxy(editEntryFormWindow)-2, (getmaxx(editEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
-                        wattroff(editEntryFormWindow, COLOR_PAIR(2));
+                        mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(footer)) / 2, "%s", footer);
+                        wattroff(formWindow, COLOR_PAIR(2));
 
                         search = 0;
                         set_field_buffer(fields[0], 0, results[0].name);
                         set_field_buffer(fields[1], 0, results[0].address);
-                        set_field_buffer(fields[3], 0, results[0].phoneNumber);
+                        set_field_buffer(fields[2], 0, results[0].phoneNumber);
                     } else {
                         init_pair(2, COLOR_RED, COLOR_BLACK);
-                        wattron(editEntryFormWindow, COLOR_PAIR(2));
+                        wattron(formWindow, COLOR_PAIR(2));
                         char footer[] = "Entry was not selected succfully";
-                        mvwprintw(editEntryFormWindow, getmaxy(editEntryFormWindow)-2, (getmaxx(editEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
-                        wattroff(editEntryFormWindow, COLOR_PAIR(2));
-
-                        wrefresh(editEntryFormWindow);
+                        mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(footer)) / 2, "%s", footer);
+                        wattroff(formWindow, COLOR_PAIR(2));
+                        
+                        curs_set(0);
+                        wrefresh(formWindow);
                         getch();
                         // Clean up the form and window
-                        curs_set(0);
+                        
                         unpost_form(my_form);
                         free_form(my_form);
                         free_field(fields[0]);
                         free_field(fields[1]);
-                        delwin(editEntryFormWindow);
+                        delwin(formWindow);
                         endwin();
 
                         return -1;
                     }
                 } else { 
                     
-                    char footer[] = "                                        ";
-                    mvwprintw(editEntryFormWindow, getmaxy(editEntryFormWindow)-2, (getmaxx(editEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
+                    char footer[] = "                                   ";
+                    mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(footer)) / 2, "%s", footer);
                     char errorMessage[MSG_LENGHT];
                     int outcome = edit_record(clientSocket, results[0], submittedEntry, errorMessage);
                     if (outcome < 0){ 
                         init_pair(2, COLOR_RED, COLOR_BLACK);
-                        wattron(editEntryFormWindow, COLOR_PAIR(2));
+                        wattron(formWindow, COLOR_PAIR(2));
                         char footer[] = "Request failed";
-                        mvwprintw(editEntryFormWindow, getmaxy(editEntryFormWindow)-2, (getmaxx(editEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
-                        wattroff(editEntryFormWindow, COLOR_PAIR(2));
-
-                        wrefresh(editEntryFormWindow);
-                        getch();
+                        mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(footer)) / 2, "%s", footer);
+                        wattroff(formWindow, COLOR_PAIR(2));
 
                         curs_set(0);
+                        wrefresh(formWindow);
+                        getch();
+
+                        
                         unpost_form(my_form);
                         free_form(my_form);
                         free_field(fields[0]);
                         free_field(fields[1]);
-                        delwin(editEntryFormWindow);
+                        delwin(formWindow);
                         endwin();
 
                         return -1;
                     } else { 
                         init_pair(2, COLOR_GREEN, COLOR_BLACK);
-                        wattron(editEntryFormWindow, COLOR_PAIR(2));
+                        wattron(formWindow, COLOR_PAIR(2));
                         char footer[] = "Entry succesfully edited";
-                        mvwprintw(editEntryFormWindow, getmaxy(editEntryFormWindow)-2, (getmaxx(editEntryFormWindow) - strlen(footer)) / 2, "%s", footer);
-                        wattroff(editEntryFormWindow, COLOR_PAIR(2));
+                        mvwprintw(formWindow, getmaxy(formWindow)-2, (getmaxx(formWindow) - strlen(footer)) / 2, "%s", footer);
+                        wattroff(formWindow, COLOR_PAIR(2));
 
-                        wrefresh(editEntryFormWindow);
-                        getch();
-                        // Clean up the form and window
+
                         curs_set(0);
+                        wrefresh(formWindow);
+                        getch();
+                        
+                        // Clean up the form and window
                         unpost_form(my_form);
                         free_form(my_form);
                         free_field(fields[0]);
                         free_field(fields[1]);
-                        delwin(editEntryFormWindow);
+                        delwin(formWindow);
                         endwin();
 
                         return 1;
@@ -898,8 +785,8 @@ int open_form_to_edit_an_entry(int clientSocket){
                 form_driver(my_form, ch);
                 break;
         }
-        touchwin(editEntryFormWindow);
-        wrefresh(editEntryFormWindow);
+        touchwin(formWindow);
+        wrefresh(formWindow);
     }
     // Clean up the form and window
     curs_set(0);
@@ -908,125 +795,13 @@ int open_form_to_edit_an_entry(int clientSocket){
     free_form(my_form);
     free_field(fields[0]);
     free_field(fields[1]);
-    delwin(editEntryFormWindow);
+    delwin(formWindow);
     endwin();
 
     return 1; // Return status 0 for insertion cancelled
 }
 
 
-int loginFormWindow() {
-
-    curs_set(1);
-
-    // Create a new window for the form
-
-    // Calculate window dimensions and positions
-    int height = 12; // Total height of the menu window (including border and title)
-    int width = 60;                    // Total width of the menu window
-    int starty = (LINES - height) / 2; // Center the window vertically
-    int startx = (COLS - width) / 2;   // Center the window horizontally
-
-    WINDOW *form_win = newwin(height, width, starty, startx);
-    box(form_win, 0, 0);
-    char header[] = "Please enter your information:";
-    mvwprintw(form_win, 1, (width - strlen(header)) / 2, "%s","Please enter your information:");
-    mvwprintw(form_win, 3, 1, "%8s","Name: ");
-    mvwprintw(form_win, 4, 1, "%8s","Pass: ");
-    
-
-    // Create form fields
-    FIELD *fields[4];
-    int gap = 2;
-    fields[0] = new_field(1, MAX_FIELD_LEN, 0, gap, 0, 0);
-    fields[1] = new_field(1, MAX_FIELD_LEN, 1, gap, 0, 0);
-    fields[2] = NULL;
-
-    // Set field options
-    set_field_back(fields[0], A_UNDERLINE);
-    set_field_back(fields[1], A_UNDERLINE);
-
-    field_opts_off(fields[0], O_AUTOSKIP);
-    field_opts_off(fields[1], O_AUTOSKIP);
-
-
-    // Create the form
-    FORM *my_form = new_form(fields);
-    set_form_win(my_form, form_win);
-
-    scale_form(my_form, &height, &width);
-
-    WINDOW* formSubWin = derwin(form_win, height, width, 3, 9);
-    set_form_sub(my_form, formSubWin);
-    post_form(my_form);
-
-    keypad(form_win, TRUE);
-    wrefresh(form_win);
-
-    int ch;
-    while ((ch = getch()) != KEY_F(1)) {
-        switch (ch) {
-            case KEY_DOWN:
-                form_driver(my_form, REQ_NEXT_FIELD);
-                form_driver(my_form, REQ_END_LINE);
-                break;
-            case KEY_UP:
-                form_driver(my_form, REQ_PREV_FIELD);
-                form_driver(my_form, REQ_END_LINE);
-                break;
-            case KEY_LEFT:
-                form_driver(my_form, REQ_PREV_CHAR);
-                break;
-            case KEY_RIGHT:
-                form_driver(my_form, REQ_NEXT_CHAR);
-                break;
-            case KEY_BACKSPACE:
-            case 127: // Handle backspace key
-                form_driver(my_form, REQ_DEL_PREV);
-                break;
-            case 10: // Enter key
-                form_driver(my_form, REQ_VALIDATION);
-
-                // Retrieve field values
-                // char *name = field_buffer(fields[0], 0);
-                // char *pass = field_buffer(fields[1], 0);
-
-                // int client_socket = create_client_socket(SERVER_IP, PORT);
-                // login(client_socket, name, pass);
-                
-                // if(0){
-                //     // TODO: Failed to login print red stuff
-                // }
-
-                curs_set(0);
-
-                unpost_form(my_form);
-                free_form(my_form);
-                free_field(fields[0]);
-                free_field(fields[1]);
-                delwin(form_win);
-                endwin();
-                return 1; // Return status 1 for successful insertion
-            default:
-                form_driver(my_form, ch);
-                break;
-        }
-        touchwin(form_win);
-        wrefresh(form_win);
-    }
-
-    // Clean up the form and window
-    curs_set(0);
-
-    unpost_form(my_form);
-    free_form(my_form);
-    free_field(fields[0]);
-    free_field(fields[1]);
-    delwin(form_win);
-    endwin();
-
-    return 0; // Return status 0 for insertion cancelled
-}
 
 int show_entries_in_array(dataEntry results[], int totalResults){
     
@@ -1062,7 +837,7 @@ int show_entries_in_array(dataEntry results[], int totalResults){
     // Scroll the pad
     int pad_top = 0; // The current top line of the pad being displayed
     int ch;
-    while ((ch = getch()) != KEY_F(1)) {
+    while ((ch = getch()) != KEY_F(1) && ch != 10) {
         switch (ch) {
             case KEY_UP:
                 if (pad_top > 0) {
@@ -1098,7 +873,53 @@ void fillPadWithContacts(WINDOW *pad, dataEntry results[], int totalResults) {
     }
 }
 
-// void server_option(int clientSocket, int option){
-//     int request = option;
-//     send_signal(clientSocket, &request);
-// };
+void terminate_process(int sig) {
+    endwin();
+    system("stty sane");
+    system("clear");
+    logout(client_socket, logoutValue);
+}
+
+void assemble_admin_window(WINDOW *w, MENU* m){
+    
+    // load the menu in the window (post)
+    post_menu(m);
+
+    // Print a title and border around the menu window  
+    box(w, 0, 0);
+    char header[] = "YellowPages TUI client";
+    init_pair(1, COLOR_YELLOW, COLOR_BLACK); 
+    wattron(w, COLOR_PAIR(1));
+    mvwprintw(w, 2, (40 - strlen(header)) / 2, "%s", header);
+    wattroff(w, COLOR_PAIR(1));
+    
+    // We print at the bottom of the screen a line with usefull info for the user
+    // This is not printed on `adminMenuWindow` but on ncurses `stdscr`
+    admin_welcome();
+
+    wrefresh(w); // updates the visuals of `adminMenuWindow`
+}
+void admin_welcome(){
+    init_pair(1, COLOR_YELLOW, COLOR_BLACK); 
+
+    clear();
+    mvprintw(LINES - 3, 3, "Welcome to ");
+    attron(COLOR_PAIR(1));
+    printw("Yellowpages ");
+    attroff( COLOR_PAIR(1));
+    printw("Admin panel.");
+    mvprintw(LINES - 2, 3, "Press F1 to go back/exit.");
+    refresh();
+}
+void user_welcome(){
+    init_pair(1, COLOR_YELLOW, COLOR_BLACK); 
+
+    clear();
+    mvprintw(LINES - 3, 3, "Welcome to ");
+    attron(COLOR_PAIR(1));
+    printw("Yellowpages ");
+    attroff( COLOR_PAIR(1));
+    printw("User panel.");
+    mvprintw(LINES - 2, 3, "Press F1 to go back/exit.");
+    refresh();
+}
