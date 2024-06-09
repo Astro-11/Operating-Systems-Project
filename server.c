@@ -305,17 +305,18 @@ void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entri
     int outcome = add_new_record(entries, entriesCount, newDataEntry);
     send_signal(clientSocket, &outcome);
 
-    if (outcome == -1) {
-        char errorMessage[MSG_LENGHT] = "Invalid entry\n";
-        printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
-        sendMsg(clientSocket, errorMessage);
+    if (outcome == 0) {
+        printf("Record succesfully added, database now has %d entries\n", outcome);
     }
-    else if (outcome == -2) {
-        char errorMessage[MSG_LENGHT] = "Entry already present\n";
-        printf("Outcome %d - failed to add record\n%s\n", outcome, errorMessage);
-        sendMsg(clientSocket, errorMessage);
-    }
-    else printf("Record succesfully added, database now has %d entries\n", outcome);
+
+    char failureMessage[MSG_LENGHT];
+    if (outcome == -1)
+        strcpy(failureMessage, "The provided record was not valid");
+    else if (outcome == -2) 
+        strcpy(failureMessage, "The provided record was already present in the database");
+
+    sendMsg(clientSocket, failureMessage);
+    printf("Outcome %d - failed to add record: \n%s\n", outcome, failureMessage);
 }
 
 //Returns the new entriesCount if succesful, -1 if newDataEntry is invalid, -2 if newDataEntry is already present in the db
@@ -349,14 +350,13 @@ void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     if (outcome == -1)
         strcpy(failureMessage, "The provided query did not match any entries");
     else if (outcome == -2) 
-        strcpy(failureMessage, "The provided query matched multiple entries. It should be exactly 1.");
+        strcpy(failureMessage, "The provided query matched multiple entries. It should be exactly 1");
 
     sendMsg(clientSocket, failureMessage);
-    //NOTE A: Should never happen?
-    printf("Outcome %d - failed to remove record: %s\n", outcome, failureMessage);
+    printf("Outcome %d - failed to remove record: \n%s\n", outcome, failureMessage);
 }
 
-//Returns 0 if succesful, -1 if dataEntry not found, -2 if multiple dataEntries found
+//Returns 0 if succesful, -1 if dataEntry not found, -2 if multiple dataEntries found, -3 if edit would cause duplication
 int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete) {
     //Validate query
     int entryToDeletePosition = search_record_position(entries, entriesCount, entryToDelete);
@@ -370,80 +370,6 @@ int delete_record(dataEntry entries[], int entriesCount, dataEntry entryToDelete
     return 0;
 }
 
-// Receives a queary with whom to filter the databse (Can be partially filled)
-// Send signal (rn is a message) to inform if the given queary identifies univocally a single entry, 
-// Send the complete entry if OK
-// Receive the COMPLETE new entry
-// Send signal to inform of success or failure
-/* void edit_record_procedure(int clientSocket, dataEntry runtimeDatabase[], int entriesCount) {
-    dataEntry entryToEdit;
-    receiveDataEntry(clientSocket, &entryToEdit);
-
-    int recordPosition = search_record_position(runtimeDatabase, entriesCount, entryToEdit);
-
-    // NOTE S: Using Text message defined in the code as primary way to communicate errors is 
-    //         a very frail system, in theory he client has no way to know what they are getting 
-    //         and how to interpret them. A macro would be a safer option.
-    switch (recordPosition) {
-        case -1: {
-            char errorMessage[MSG_LENGHT] = "Error: No match found\n";
-            printf("Outcome %d - failed to edit record\n%s\n", recordPosition, errorMessage);
-            sendMsg(clientSocket, errorMessage);
-        } break;
-        case -2: {
-            char errorMessage[MSG_LENGHT] = "Error: Multiple matches found\n";
-            printf("Outcome %d - failed to edit record\n%s\n", recordPosition, errorMessage);
-            sendMsg(clientSocket, errorMessage);
-        } break;
-        default: {
-            char errorMessage[MSG_LENGHT] = "OK: Sending selected entry\n";
-            printf("Outcome %d - Found a single match\n%s\n", recordPosition, errorMessage);
-            sendMsg(clientSocket, errorMessage);
-        } break;
-    }
-
-    sendDataEntry(clientSocket, &runtimeDatabase[recordPosition]);
-
-    dataEntry editedEntry;
-    receiveDataEntry(clientSocket, &editedEntry);
-
-    int outcome = validate_entry(entryToEdit);
-    if( outcome < 0){
-        char errorMessage[MSG_LENGHT] = "Error: Invalid modifications\n";
-        printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
-        sendMsg(clientSocket, errorMessage);
-    } else {
-        sanitize_entry(&entryToEdit);
-        strcpy(runtimeDatabase[recordPosition].name, editedEntry.name);
-        strcpy(runtimeDatabase[recordPosition].phoneNumber, editedEntry.phoneNumber);
-        strcpy(runtimeDatabase[recordPosition].phoneNumber, editedEntry.phoneNumber);
-
-        char errorMessage[MSG_LENGHT] = "Success: Entry modified\n";
-        printf("Outcome %d - Ok\n%s\n", outcome, errorMessage);
-        sendMsg(clientSocket, errorMessage);
-    }
-    // int outcome = edit_record(runtimeDatabase, entriesCount, entryToEdit, editedEntry);
-    // send_signal(clientSocket, &outcome);
-
-    // switch (outcome) {
-    //     case -1: {
-    //         char errorMessage[MSG_LENGHT] = "Error: No match found\n";
-    //         printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
-    //         sendMsg(clientSocket, errorMessage);
-    //     } break;
-    //     case -2: {
-    //         char errorMessage[MSG_LENGHT] = "Error: Multiple matches found\n";
-    //         printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
-    //         sendMsg(clientSocket, errorMessage);
-    //     } break;
-    //     case -3: {
-    //         char errorMessage[MSG_LENGHT] = "Error: Invalid modifications\n";
-    //         printf("Outcome %d - failed to edit record\n%s\n", outcome, errorMessage);
-    //         sendMsg(clientSocket, errorMessage);
-    //     } break;
-    // }
-} */
-
 void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
     dataEntry entryToEdit;
     receiveDataEntry(clientSocket, &entryToEdit);
@@ -453,21 +379,20 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
     int outcome = edit_record(entries, entriesCount, entryToEdit, editedEntry);
     send_signal(clientSocket, &outcome);
 
-    if (outcome == -1) {
-        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: no such entry in the database\n";
-        printf("Outcome %d: failed to edit record\n%s\n", outcome, errorMessage);
-        sendMsg(clientSocket, errorMessage);
+    if (outcome == 0) {
+        printf("Record succesfully edited\n");
     }
-    else if (outcome == -2) {
-        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: invalid modifications\n";
-        printf("Outcome %d: failed to edit record\n%s\n", outcome, errorMessage);
-        sendMsg(clientSocket, errorMessage);
-    }
-    else if (outcome == -3) {
-        char errorMessage[MSG_LENGHT] = "Entry cannot be edited: a duplicated entry would be created\n";
-        printf("Outcome %d: failed to edit record\n%s\n", outcome, errorMessage);
-        sendMsg(clientSocket, errorMessage);
-    }
+
+    char failureMessage[MSG_LENGHT];
+    if (outcome == -1)
+        strcpy(failureMessage, "Record cannot be edited: no such record in the database");
+    else if (outcome == -2) 
+        strcpy(failureMessage, "Record cannot be edited: invalid modifications");
+    else if (outcome == -3) 
+        strcpy(failureMessage, "Record cannot be edited: a duplicated record would be created");
+
+    sendMsg(clientSocket, failureMessage);
+    printf("Outcome %d - failed to edit record: \n%s\n", outcome, failureMessage);
 }
 
 //Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
@@ -516,8 +441,12 @@ int edit_record(dataEntry entries[], int entriesCount, dataEntry entryToEdit, da
         return -3;
     }
 
-    printf("Edit was a success:\n");
+    return 0;
+
+    #if DEBUG
+    printf("Edited entry:\n");
     print_data_entry(entries[position]);
+    #endif
 }
 
 void send_entries(int clientSocket, dataEntry entries[], int entriesCount) {

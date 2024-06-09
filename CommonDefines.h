@@ -17,9 +17,9 @@
 #define ACCESS_DENIED "ACCESS_DENIED"
 
 typedef struct {
-    char name[256];
-    char address[256];
-    char phoneNumber[256];
+    char name[MSG_LENGHT];
+    char address[MSG_LENGHT];
+    char phoneNumber[MSG_LENGHT];
 } dataEntry;
 
 typedef enum {
