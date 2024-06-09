@@ -5,7 +5,7 @@
 #include "DatabaseHandler.h"
 #include "CommonUtils.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 int save_entry(dataEntry newDataEntry, FILE *filePointer);
 
@@ -210,6 +210,8 @@ int save_database_to_file(FILE* filePointer, dataEntry entries[], int entriesCou
 //Returns 0 if succesful, -1 if trying to save invalid dataEntry
 int save_entry(dataEntry newDataEntry, FILE *filePointer) {
     int out;
+    sanitize_entry(&newDataEntry);
+
     if ((out = validate_entry(newDataEntry)) != 0){
         #if DEBUG
             printf("-----------\n");
@@ -219,8 +221,8 @@ int save_entry(dataEntry newDataEntry, FILE *filePointer) {
         
         return -1;
     }
-    sanitize_entry(&newDataEntry);
     if (fwrite(&newDataEntry, sizeof(dataEntry), 1, filePointer) != 1)
         return -1;
+
     return 0;
 }
