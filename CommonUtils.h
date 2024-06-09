@@ -11,5 +11,6 @@ int matches(dataEntry entry, dataEntry filter);
 int remove_all_whitespace(char str[]);
 int remove_extra_whitespace(char str[]);
 char* rtrim(char *str);
+char* uppercase_to_lowercase(char* str);
 
 #endif

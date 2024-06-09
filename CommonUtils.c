@@ -12,6 +12,7 @@ int matches(dataEntry entry, dataEntry filter);
 int remove_all_whitespace(char str[]);
 int remove_extra_whitespace(char str[]);
 char* rtrim(char *str);
+char* uppercase_to_lowercase(char* str);
 
 void print_data_entry(dataEntry entry) {
     printf("Name_________: %s\n", entry.name);
@@ -27,14 +28,20 @@ void print_all_entries(dataEntry entries[], int entriesCount) {
 
 //Returns 0 if matches, -1 otherwise
 int matches(dataEntry entry, dataEntry filter) {
-    if (strlen(filter.name) > 0 && strstr(entry.name, filter.name) == NULL) {
-        return -1;
+    if (strlen(filter.name) > 0) {
+        remove_extra_whitespace(filter.name);
+        if (strstr(uppercase_to_lowercase(entry.name), uppercase_to_lowercase(filter.name)) == NULL)
+            return -1;
     }
-    if (strlen(filter.address) > 0 && strstr(entry.address, filter.address) == NULL) {
-        return -1;
+    if (strlen(filter.address) > 0) {
+        remove_extra_whitespace(filter.address);
+        if (strstr(uppercase_to_lowercase(entry.address), uppercase_to_lowercase(filter.address)) == NULL)
+            return -1;
     }
-    if (strlen(filter.phoneNumber) > 0 && strstr(entry.phoneNumber, filter.phoneNumber) == NULL) {
-        return -1;
+    if (strlen(filter.phoneNumber) > 0) {
+        remove_extra_whitespace(filter.phoneNumber);
+        if (strstr(uppercase_to_lowercase(entry.phoneNumber), uppercase_to_lowercase(filter.phoneNumber)) == NULL)
+            return -1;
     }
     return 0;
 }
@@ -99,3 +106,15 @@ char* rtrim(char *str) {
     str[len] = '\0';
     return str;
 }
+
+char* uppercase_to_lowercase(char* str) {
+    int len = strlen(str);
+    while (len >= 0 ) {
+        str[len] = tolower(str[len]);
+        len--;
+    }
+    return str;
+}
+
+
+
