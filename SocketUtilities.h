@@ -12,10 +12,9 @@ int sendMsg(int socket, char * buffer);
 int receiveDataEntry(int socket, dataEntry * buffer);
 int sendDataEntry(int socket, dataEntry * buffer);
 
-int create_server_socket(int port);
-int create_client_socket(const char *server_ip, int port);
-int accept_client_connection(int server_socket);
-void handle_error(const char *msg);
+int create_server_socket(int port, void (*f)(int errorCode, char* errorMessage));
+int create_client_socket(const char *server_ip, int port, void (*f)(int errorCode, char* errorMessage));
+int accept_client_connection(int server_socket, void (*f)(int errorCode, char* errorMessage));
 
 void login(int client_socket, char password[], char response[]);
 void no_login(int client_socket);

@@ -58,7 +58,7 @@ int main(){
     signal(SIGUSR2, handle_user_death_signal);
 
     mainServerPid = getpid();
-    int serverSocket = create_server_socket(PORT);
+    int serverSocket = create_server_socket(PORT, handle_errno);
 
     debug_populate_db();
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
@@ -74,7 +74,7 @@ int main(){
     while(1){
         printf("Main server is online listening for connection...\n");
         listen(serverSocket, 10);
-        int clientSocket = accept_client_connection(serverSocket);
+        int clientSocket = accept_client_connection(serverSocket, handle_errno);
 
         int clientType = login_procedure(clientSocket);
         if (clientType == -1)

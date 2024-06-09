@@ -12,15 +12,12 @@ int receive_signal(int socket, int * buffer) {
     int signal = 0;
     int returnValue = recv(socket, &signal, SIGNAL_LENGTH, 0);
     signal = ntohl(signal);
-    //printf("Received %d, Signal content: %d, Signal address: %p\n", returnValue, signal, &signal);
     *buffer = signal;
     return returnValue;
 }
 
 int send_signal(int socket, int * buffer) {
     int signal = htonl(*buffer);
-    //printf("SignalTest: %d\n", signal);
-    //printf("Signal content: %d, Singnal address: %p\n", signal, &signal);
     return send(socket, &signal, SIGNAL_LENGTH, 0);
 }
 
@@ -40,20 +37,14 @@ int sendDataEntry(int socket, dataEntry * buffer) {
     return send(socket, buffer, DATAENTRY_LENGHT, 0);
 }
 
-void handle_error(const char *msg) {
-    perror(msg);
-    exit(EXIT_FAILURE);
-}
-
-int create_server_socket(int port) {
+int create_server_socket(int port, void (*f)(int errorCode, char* errorMessage)) {
     int server_socket;
     struct sockaddr_in server_address;
 
     // Create the socket
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket < 0) {
-        handle_error("socket creation failed");
-    }
+    if (server_socket < 0)
+        (*f)(0, "Socket creation failed");
 
     // Configure the server address structure
     memset(&server_address, 0, sizeof(server_address)); // helps to avoid weird bugs with uninitialized memory
@@ -62,45 +53,40 @@ int create_server_socket(int port) {
     server_address.sin_addr.s_addr = INADDR_ANY; //INADDR_ANY
 
     
-    if (bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) {
-        handle_error("bind failed");
-    }
+    if (bind(server_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0)
+        (*f)(0, "Bind failed");
 
     return server_socket;
 }
 
-int create_client_socket(const char *server_ip, int port) {
+int create_client_socket(const char *server_ip, int port, void (*f)(int errorCode, char* errorMessage)) {
     int client_socket;
     struct sockaddr_in server_address;
 
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (client_socket < 0) {
-        handle_error("socket creation failed");
-    }
+    if (client_socket < 0)
+        (*f)(0, "Socket creation failed");
 
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(port);
 
     // Convert IP address from text to binary form
-    if (inet_pton(AF_INET, server_ip, &server_address.sin_addr) <= 0) {
-        handle_error("invalid address or address not supported");
-    }
+    if (inet_pton(AF_INET, server_ip, &server_address.sin_addr) <= 0)
+        (*f)(0, "Invalid address or address not supported");
 
-    if (connect(client_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0) {
-        handle_error("connection failed");
-    }
+    if (connect(client_socket, (struct sockaddr*)&server_address, sizeof(server_address)) < 0)
+        (*f)(0, "Connection failed");
 
     return client_socket;
 }
 
-int accept_client_connection(int server_socket) {
+int accept_client_connection(int server_socket, void (*f)(int errorCode, char* errorMessage)) {
     struct sockaddr_in client_address;
     socklen_t client_addr_len = sizeof(client_address);
 
     int client_socket = accept(server_socket, (struct sockaddr*)&client_address, &client_addr_len);
-    if (client_socket < 0) {
-        handle_error("accept failed");
-    }
+    if (client_socket < 0)
+        (*f)(0, "Accept failed");
 
     return client_socket;
 }
@@ -118,9 +104,6 @@ void no_login(int client_socket){
     int base = BASE;
     send_signal(client_socket, &base);
 }
-
-
-
 
 int check_socket(int socket) {
     // int result = send(socket, NULL, 0, MSG_NOSIGNAL);

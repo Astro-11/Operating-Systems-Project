@@ -15,10 +15,12 @@ int receive_entries(int clientSocket);
 int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]);
 void logout(int clientSocket, int request);
 
+void mock_handle_errno(int errorCode, char* errorMessage) {}
+
 //Set password as 0 to authenticate as BASE
 //Returns client socket if succesful, -1 if failed 
 int init(char password[]) {
-    int clientSocket = create_client_socket(SERVER_IP, PORT);
+    int clientSocket = create_client_socket(SERVER_IP, PORT, mock_handle_errno);
 
     if (strcmp(password, "0") == 0) {
         no_login(clientSocket);
