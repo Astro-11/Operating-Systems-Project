@@ -136,21 +136,18 @@ void admin_loop(int clientSocket) {
                 errorCounter = 0;
                 printf("%d - Search database\n\n", choice);
                 search_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
-                printf("Search results succesfully sent to client\n");
                 break;
 
             case ADD_RECORD:
                 errorCounter = 0;
                 printf("%d - Add new record\n\n", choice);
                 add_new_record_procedure(clientSocket, runtimeDatabase, &runtimeEntriesCount);
-                printf("runtimeEntriesCount: %d\n",runtimeEntriesCount);
                 break;
 
             case REMOVE_RECORD:
                 errorCounter = 0;
                 printf("%d - Remove record\n\n", choice);
                 delete_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
-                printf("runtimeEntriesCount: %d\n",runtimeEntriesCount);
                 break;
 
             case EDIT_RECORD:
@@ -198,7 +195,6 @@ void user_loop(int clientSocket) {
                 errorCounter = 0;
                 printf("%d - Search database\n\n", choice);
                 search_record_procedure(clientSocket, runtimeDatabase, runtimeEntriesCount);
-                printf("Search results succesfully sent to client\n");
                 break;
 
             case LOGOUT: 
@@ -272,9 +268,11 @@ void search_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     int resultsCount = search_records(entries, entriesCount, query, queryResults);
 
     send_entries(clientSocket, queryResults, resultsCount);
+    printf("Search results succesfully sent to client\n\n");
+
 
     #if DEBUG
-        printf("resultsCount: %d\n", resultsCount);
+        printf("ResultsCount: %d\n", resultsCount);
         print_all_entries(queryResults, resultsCount);
     #endif
 
@@ -307,7 +305,7 @@ void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entri
     send_signal(clientSocket, &outcome);
 
     if (outcome >= 0) {
-        printf("Record succesfully added, database now has %d entries\n", outcome);
+        printf("Record succesfully added, database now has %d entries\n\n", outcome);
         return;
     }
 
@@ -318,7 +316,7 @@ void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entri
         strcpy(failureMessage, "The provided record was already present in the database");
 
     sendMsg(clientSocket, failureMessage);
-    printf("Outcome %d - failed to add record: \n%s\n", outcome, failureMessage);
+    printf("Outcome %d - failed to add record: \n%s\n\n", outcome, failureMessage);
     return;
 }
 
@@ -345,7 +343,7 @@ void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     send_signal(clientSocket, &outcome);
 
     if (outcome == 0){
-        printf("Record succesfully removed from database\n");
+        printf("Record succesfully removed from database\n\n");
         return;
     }
 
@@ -356,7 +354,7 @@ void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesC
         strcpy(failureMessage, "The provided query matched multiple entries. It should be exactly 1");
 
     sendMsg(clientSocket, failureMessage);
-    printf("Outcome %d - failed to remove record: \n%s\n", outcome, failureMessage);
+    printf("Outcome %d - failed to remove record: \n%s\n\n", outcome, failureMessage);
     return;
 }
 
@@ -384,7 +382,7 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
     send_signal(clientSocket, &outcome);
 
     if (outcome == 0) {
-        printf("Record succesfully edited\n");
+        printf("Record succesfully edited\n\n");
         return;
     }
 
@@ -397,7 +395,7 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
         strcpy(failureMessage, "Record cannot be edited: a duplicated record would be created");
 
     sendMsg(clientSocket, failureMessage);
-    printf("Outcome %d - failed to edit record: \n%s\n", outcome, failureMessage);
+    printf("Outcome %d - failed to edit record: \n%s\n\n", outcome, failureMessage);
 }
 
 //Returns 0 if succesful, -1 if invalid entryToEdit, -2 if invalid editedEntry
@@ -556,7 +554,7 @@ void handle_admin_death_signal(int sig){
         outdatedRuntimeDb = 1;
         if (userServersGroupPid != 0) killpg(userServersGroupPid, SIGUSR1);
         printf("Sending signal to update database to user servers in group %d\n", userServersGroupPid);
-        printf("There are now %d admins online\n", adminOnline);
+        printf("There are now %d admins online\n\n", adminOnline);
     }
     //If child user server update db in next loop
     else {
@@ -569,7 +567,7 @@ void handle_admin_death_signal(int sig){
 void handle_user_death_signal(int sig) {
     usersOnline--;
     if (usersOnline == 0) userServersGroupPid = 0; //Reset control group if no more users online
-    printf("There are now %d users online\n", usersOnline);
+    printf("There are now %d users online\n\n", usersOnline);
 }
 
 //Error code 0 make uses of errno, negative error codes don't
