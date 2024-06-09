@@ -257,7 +257,6 @@ int login_procedure(int clientSocket) {
     sendMsg(clientSocket, serverResponse);
     printf("Admin access granted to a client.\n");
     return ADMIN;
-    
 }
 
 void search_record_procedure(int clientSocket, dataEntry entries[], int entriesCount) {
@@ -278,6 +277,8 @@ void search_record_procedure(int clientSocket, dataEntry entries[], int entriesC
         printf("resultsCount: %d\n", resultsCount);
         print_all_entries(queryResults, resultsCount);
     #endif
+
+    return;
 }
 
 
@@ -305,8 +306,9 @@ void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entri
     int outcome = add_new_record(entries, entriesCount, newDataEntry);
     send_signal(clientSocket, &outcome);
 
-    if (outcome == 0) {
+    if (outcome >= 0) {
         printf("Record succesfully added, database now has %d entries\n", outcome);
+        return;
     }
 
     char failureMessage[MSG_LENGHT];
@@ -317,6 +319,7 @@ void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entri
 
     sendMsg(clientSocket, failureMessage);
     printf("Outcome %d - failed to add record: \n%s\n", outcome, failureMessage);
+    return;
 }
 
 //Returns the new entriesCount if succesful, -1 if newDataEntry is invalid, -2 if newDataEntry is already present in the db
@@ -354,6 +357,7 @@ void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesC
 
     sendMsg(clientSocket, failureMessage);
     printf("Outcome %d - failed to remove record: \n%s\n", outcome, failureMessage);
+    return;
 }
 
 //Returns 0 if succesful, -1 if dataEntry not found, -2 if multiple dataEntries found, -3 if edit would cause duplication
@@ -381,6 +385,7 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
 
     if (outcome == 0) {
         printf("Record succesfully edited\n");
+        return;
     }
 
     char failureMessage[MSG_LENGHT];
