@@ -351,7 +351,7 @@ void delete_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     if (outcome == -1)
         strcpy(failureMessage, "The provided query did not match any entries");
     else if (outcome == -2) 
-        strcpy(failureMessage, "The provided query matched multiple entries. It should be exactly 1");
+        strcpy(failureMessage, "The provided query matched multiple entries");
 
     sendMsg(clientSocket, failureMessage);
     printf("Outcome %d - failed to remove record: \n%s\n\n", outcome, failureMessage);
@@ -388,11 +388,11 @@ void edit_record_procedure(int clientSocket, dataEntry entries[], int entriesCou
 
     char failureMessage[MSG_LENGHT];
     if (outcome == -1)
-        strcpy(failureMessage, "Record cannot be edited: no such record in the database");
+        strcpy(failureMessage, "No such record in the database");
     else if (outcome == -2) 
-        strcpy(failureMessage, "Record cannot be edited: invalid modifications");
+        strcpy(failureMessage, "Invalid modifications");
     else if (outcome == -3) 
-        strcpy(failureMessage, "Record cannot be edited: a duplicated record would be created");
+        strcpy(failureMessage, "A duplicated record would be created");
 
     sendMsg(clientSocket, failureMessage);
     printf("Outcome %d - failed to edit record: \n%s\n\n", outcome, failureMessage);

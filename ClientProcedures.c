@@ -11,7 +11,6 @@ int init(char password[]);
 int search_record(int clientSocket, dataEntry searchedEntry, dataEntry results[]);
 int add_new_record(int clientSocket, dataEntry newEntry, char errorMessage[MSG_LENGHT]);
 int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[MSG_LENGHT]);
-int receive_entries(int clientSocket);
 int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]);
 void logout(int clientSocket, int request);
 
@@ -114,5 +113,4 @@ void logout(int clientSocket, int request) {
     send_signal(clientSocket, &logout);
     send_signal(clientSocket, &request);
     close(clientSocket);
-    exit(EXIT_SUCCESS);
 }
