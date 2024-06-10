@@ -7,9 +7,6 @@
 #include <string.h>
 #include <signal.h>
 
-// #include <stdio.h> // If we want to save to file
-
-
 #include "ClientProcedures.h"
 
 #define MENU_CHOICES 6
@@ -528,11 +525,14 @@ void build_form_window(WINDOW **w, FORM **f, char *title){
             return;
         }
     #endif
-    // Highlits the fields with an underscore character 
-    set_field_back(fields[0], A_UNDERLINE);
-    set_field_back(fields[1], A_UNDERLINE);
-    set_field_back(fields[2], A_UNDERLINE);
 
+    // Highlits the fields with an underscore character
+    for (int i = 0; i < 3; ++i) {
+        set_field_back(fields[i], A_UNDERLINE);
+        field_opts_off(fields[i], O_AUTOSKIP);  
+        field_opts_off(fields[i], O_WRAP);  
+        field_opts_off(fields[i], O_STATIC);     // Enable static field behavior
+    }
 
     // Create the form
     *f = new_form(fields);

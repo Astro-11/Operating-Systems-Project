@@ -7,6 +7,8 @@
 #define PORT 9890
 
 #define DATAENTRY_LENGHT sizeof(dataEntry)
+#define MAX_FIELD_LENGHT 64
+
 #define SIGNAL_LENGTH 4
 #define MSG_LENGHT 256
 

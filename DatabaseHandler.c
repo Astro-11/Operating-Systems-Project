@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "DatabaseHandler.h"
+#include "CommonDefines.h"
 #include "CommonUtils.h"
 
 #define DEBUG 0
@@ -132,7 +133,7 @@ int check_name(char name[]) {
             if ( c != ' ') 
                 return 0; 
         } else
-            if(++count > 62)
+            if(++count > MAX_FIELD_LENGHT - 10)
                 return 0;
     
     return count;
@@ -146,7 +147,7 @@ int check_address(char address[]) {
         if (c != ' ' && isspace(c)){
                 return 0; 
         } else{
-            if(++count > 62)
+            if(++count > MAX_FIELD_LENGHT - 10)
                 return 0;
         }
     return count;
@@ -159,13 +160,9 @@ int check_phone_number(char phoneNumber[]) {
     while ((c = phoneNumber[i++]) != '\0') 
         if (!isdigit(c)){
             if (c != ' ')
-            //              &&
-            //     c != '.' &&
-            //     c != '-' &&
-            //     c != '_' 
                 return 0; 
         } else{
-            if(++count > 64)
+            if(++count > 10)
                 return 0;;
         }
     return count;

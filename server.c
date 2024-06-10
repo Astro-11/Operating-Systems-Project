@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -43,8 +44,8 @@ void handle_errno(int errorCode, char* errorMessage);
  * This global variables are needed because it's not possible to 
  * pass arguments to the function that handles SIGINT.
  */
-static dataEntry *runtimeDatabase; 
-static int runtimeEntriesCount;
+static dataEntry *runtimeDatabase = NULL; 
+static int runtimeEntriesCount = 0;
 static int outdatedRuntimeDb = 0;
 static volatile int adminOnline = 0;
 static volatile int usersOnline = 0;
@@ -485,19 +486,18 @@ int search_record_position(dataEntry runtimeDatabase[], int entriesCount, dataEn
     return position;
 }
 
-void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount) {
+void update_runtime_database(dataEntry newRuntimeDatabase[], int *newRuntimeEntriesCount) {
     FILE* databasePointer = open_db_read(handle_errno);
     *newRuntimeEntriesCount = countEntries(databasePointer, DATAENTRY_LENGHT);
 
+    if (runtimeDatabase != NULL)
+        free(runtimeDatabase);
+
     //NOTE A: for now we do not handle runtime overflow
     //However, it might be worth looking into dynamic data structures for the runtime db
-    int runtimeDatabaseSize = 256;
-    while(runtimeDatabaseSize < runtimeEntriesCount * 2){
-        runtimeDatabaseSize *= 2;
-    }
+    int runtimeDatabaseSize = 256 > *newRuntimeEntriesCount ? 512 : (*newRuntimeEntriesCount)*2;
 
-    dataEntry placeholder[runtimeDatabaseSize];
-    runtimeDatabase = placeholder;
+    runtimeDatabase = (dataEntry *)malloc(runtimeDatabaseSize * sizeof(dataEntry));;
 
     readEntries(databasePointer, runtimeDatabase);
     close_db(databasePointer, handle_errno);
