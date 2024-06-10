@@ -195,10 +195,13 @@ int open_form_to_search(int clientSocket) {
     char title[] = "Who are you looking for?";
 
     build_form_window(&formWindow, &myForm, title);
-
     FIELD **fields = form_fields(myForm);
-    
-    int outcome;
+    mvprintw(LINES - 2, 3, "Press F1 to go back/exit. Press F2 to save results to searchResults.txt");
+    form_driver(myForm, REQ_FIRST_FIELD);
+    refresh();
+    wrefresh(formWindow);
+
+    int outcome=-1;
     dataEntry results[128];
     int exit = 0;
     int ch;
@@ -492,9 +495,8 @@ int open_form_to_edit_an_entry(int clientSocket){
 }
 
 void build_form_window(WINDOW **w, FORM **f, char *title){
-
+    
     curs_set(1); // Turns the cursor visibility on
-
     // Create a new window for the form
     // Calculate window dimensions and positions
     int height = 12;                   // Total height of the menu window (including border and title)
@@ -602,7 +604,7 @@ int show_entries_in_array(dataEntry results[], int totalResults){
     // Scroll the pad
     int pad_top = 0; // The current top line of the pad being displayed
     int ch;
-    while ((ch = getch()) != KEY_F(1) && ch != 10) {
+    while ((ch = getch()) != KEY_F(1) && ch != KEY_F(2) && ch != 10) {
         switch (ch) {
             case KEY_UP:
                 if (pad_top > 0) {
@@ -616,6 +618,20 @@ int show_entries_in_array(dataEntry results[], int totalResults){
                 break;
         }
         prefresh(pad, pad_top, 0, pad_y, pad_x, rows - 1, cols - 1);
+    }
+
+
+    FILE *fp;
+    if(ch == KEY_F(2) && (fp = fopen("searchResults.txt", "w")) != NULL){
+        fprintf(fp, "Search results from last search on Yellowpages:\n");
+        for(int i = 0; i < totalResults; i++){
+            fprintf(fp, " # %d\n", i);
+            fprintf(fp, " Name: %s\n", results[i].name);
+            fprintf(fp, " Address: %s\n", results[i].address);
+            fprintf(fp, " Phone Number: %s\n", results[i].phoneNumber);
+            fprintf(fp, " ----------------------------------------\n");
+        }
+        fclose(fp);
     }
 
     // Cleanup
