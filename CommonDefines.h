@@ -10,6 +10,8 @@
 #define SIGNAL_LENGTH 4
 #define MSG_LENGHT 256
 
+#define MAX_RESULTS 128
+
 #define ADMIN 0
 #define BASE 1
 

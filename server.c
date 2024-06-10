@@ -263,8 +263,9 @@ void search_record_procedure(int clientSocket, dataEntry entries[], int entriesC
     print_data_entry(query);
                     
     //Search for record
-    dataEntry queryResults[entriesCount];
+    dataEntry queryResults[MAX_RESULTS];
     int resultsCount = search_records(entries, entriesCount, query, queryResults);
+    if (resultsCount == MAX_RESULTS) printf("Too many results were found, only the first %d will be shown\n", MAX_RESULTS);
 
     send_entries(clientSocket, queryResults, resultsCount);
     printf("Search results succesfully sent to client\n\n");
@@ -285,8 +286,10 @@ int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataE
     int resultsCount = 0;
 
     for(int i = 0; i < entriesCount; i++)
-        if(matches(entries[i], query) == 0)
+        if(matches(entries[i], query) == 0) {
             queryResults[resultsCount++] = entries[i];
+            if (resultsCount >= MAX_RESULTS) return resultsCount;
+        }
 
     return resultsCount;
 }
