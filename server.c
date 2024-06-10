@@ -34,8 +34,8 @@ void send_entries(int clientSocket, dataEntry entries[], int entriesCount);
 void update_runtime_database(dataEntry newRuntimeDatabase[], int * newRuntimeEntriesCount);
 
 void handle_sigint(int sig);
-void handle_admin_death_signal(int sig);
-void handle_user_death_signal(int sig);
+void handle_death_signal_from_admin(int sig);
+void handle_death_signal_from_user(int sig);
 
 void handle_errno(int errorCode, char* errorMessage);
 
@@ -54,13 +54,13 @@ static pid_t userServersGroupPid = 0;
 int main(){
     // Handles saving database when server is terminated 
     signal(SIGINT, handle_sigint);
-    signal(SIGUSR1, handle_admin_death_signal);
-    signal(SIGUSR2, handle_user_death_signal);
+    signal(SIGUSR1, handle_death_signal_from_admin);
+    signal(SIGUSR2, handle_death_signal_from_user);
 
     mainServerPid = getpid();
     int serverSocket = create_server_socket(PORT, handle_errno);
 
-    debug_populate_db();
+    // debug_populate_db();
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
     printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
     
@@ -117,9 +117,8 @@ int main(){
     }
     
     // NOTE S: We never reach here right?
-    close(serverSocket); 
-
-    return 0;
+    // close(serverSocket); 
+    // return 0;
 }
 
 void admin_loop(int clientSocket) {
@@ -546,13 +545,15 @@ void logout_procedure(int clientSocket) {
     }
 }
 
-//For main server and child user servers
-void handle_admin_death_signal(int sig){
+// For main server and child user servers
+// Handles SIGUSR1
+void handle_death_signal_from_admin(int sig){
     //If main server reset admin counter and tell child user servers to update db
-    if (mainServerPid == getpid()) {
+    if ( getpid() == mainServerPid) {
         adminOnline = 0;
         outdatedRuntimeDb = 1;
-        if (userServersGroupPid != 0) killpg(userServersGroupPid, SIGUSR1);
+        if (userServersGroupPid != 0) 
+            killpg(userServersGroupPid, SIGUSR1);
         printf("Sending signal to update database to user servers in group %d\n", userServersGroupPid);
         printf("There are now %d admins online\n\n", adminOnline);
     }
@@ -563,10 +564,12 @@ void handle_admin_death_signal(int sig){
     }
 }
 
-//For main server only
-void handle_user_death_signal(int sig) {
+// For main server only
+// Handles SIGUSR1
+void handle_death_signal_from_user(int sig) {
     usersOnline--;
-    if (usersOnline == 0) userServersGroupPid = 0; //Reset control group if no more users online
+    if (usersOnline == 0) 
+        userServersGroupPid = 0; //Reset control group if no more users online
     printf("There are now %d users online\n\n", usersOnline);
 }
 
