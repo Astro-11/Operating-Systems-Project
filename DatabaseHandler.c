@@ -209,9 +209,9 @@ int save_database_to_file(FILE* filePointer, dataEntry entries[], int entriesCou
 //Only local
 //Returns 0 if succesful, -1 if trying to save invalid dataEntry
 int save_entry(dataEntry newDataEntry, FILE *filePointer) {
-    int out;
     sanitize_entry(&newDataEntry);
 
+    int out;
     if ((out = validate_entry(newDataEntry)) != 0){
         #if DEBUG
             printf("-----------\n");
