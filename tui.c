@@ -461,7 +461,7 @@ int open_form_to_edit_an_entry(int clientSocket){
                     int outcome = search_record(clientSocket, submittedEntry, results);
 
                     if (outcome == 1) {
-                        display_form_message(formWindow, "Entry succesfully selected, can edit", 2);
+                        display_form_message(formWindow, "Success, press any key to continue", 2);
                         search = 0;
                         set_field_buffer(fields[0], 0, results[0].name);
                         set_field_buffer(fields[1], 0, results[0].address);
