@@ -10,7 +10,7 @@
 #include "ClientProcedures.h"
 
 #define MENU_CHOICES 6
-#define MAX_FIELD_LEN 30
+#define MAX_FIELD_LEN 45
 #define BUFFER_SIZE 256
 
 #define DEBUG 0
@@ -110,7 +110,7 @@ int admin_client_routine(int clientSocket){
     keypad(adminMenuWindow, TRUE);
 
     // Create the sub-window for the menu items with padding
-    int xOffset = width / 3 - 1;
+    int xOffset = width / 3 - 3;
     int yOffset = height / 3 + 1;
     WINDOW *menuSubwin = derwin(adminMenuWindow, MENU_CHOICES, width - 2 - xOffset, yOffset, xOffset);
     set_menu_win(adminMenu, adminMenuWindow);
@@ -510,7 +510,7 @@ void build_form_window(WINDOW **w, FORM **f, char *title){
 
     // Create form fields
     FIELD **fields = malloc(4 * sizeof(FIELD*));
-    int gap = 2;
+    int gap = 3;
     fields[0] = new_field(1, MAX_FIELD_LEN, 0, gap, 0, 0);
     fields[1] = new_field(1, MAX_FIELD_LEN, 1, gap, 0, 0);
     fields[2] = new_field(1, MAX_FIELD_LEN, 2, gap, 0, 0);
@@ -531,7 +531,7 @@ void build_form_window(WINDOW **w, FORM **f, char *title){
         set_field_back(fields[i], A_UNDERLINE);
         field_opts_off(fields[i], O_AUTOSKIP);  
         field_opts_off(fields[i], O_WRAP);  
-        field_opts_off(fields[i], O_STATIC);     // Enable static field behavior
+        // field_opts_off(fields[i], O_STATIC);
     }
 
     // Create the form

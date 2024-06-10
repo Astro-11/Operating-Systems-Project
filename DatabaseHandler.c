@@ -162,7 +162,7 @@ int check_phone_number(char phoneNumber[]) {
             if (c != ' ')
                 return 0; 
         } else{
-            if(++count > 10)
+            if(++count > MAX_FIELD_LENGHT - 10)
                 return 0;;
         }
     return count;
