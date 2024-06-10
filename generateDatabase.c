@@ -4,8 +4,6 @@
 #include <time.h>
 #include "DatabaseHandler.h"
 
-#define PHONE_LENGTH 11
-
 
 
 void generatePhoneNumber(char phoneNumber[]) {
@@ -15,23 +13,28 @@ void generatePhoneNumber(char phoneNumber[]) {
 }
 
 void generateName(char name[]) {
-    const char *names[20] = {"Mario",   "Luigi",     "Giovanni", "Antonio",
-                             "Roberto", "Francesco", "Giuseppe", "Paolo",
-                             "Andrea",  "Stefano",   "Maria",    "Anna",
-                             "Giulia",  "Laura",     "Eleonora", "Francesca",
-                             "Sara",    "Alessia",   "Martina",  "Valentina"};
-    const char *surnames[15] = {"Rossi", "Bianchi",  "Verdi",  "Ferrari",
-                                "Russo", "Esposito", "Bianco", "Colombo",
-                                "Ricci", "Marino",   "Romano", "Greco",
-                                "Conti", "Costa",    "Gallo"};
 
-    strcpy(name, names[rand() % 20]);
-    strcat(name, " ");
-    strcat(name, surnames[rand() % 15]);
+  const char *names[30] = {
+      "Mario",     "Luigi",    "Giovanni", "Antonio",     "Roberto",
+      "Francesco", "Giuseppe", "Paolo",    "Andrea",      "Stefano",
+      "Maria",     "Anna",     "Giulia",   "Laura",       "Eleonora",
+      "Francesca", "Sara",     "Alessia",  "Martina",     "Valentina",
+      "John",      "Michael",  "Emily",    "Jessica",     "David",
+      "James",     "Linda",    "Sophia",   "Christopher", "Isabella"};
+
+  const char *surnames[15] = {"Rossi", "Bianchi",  "Verdi",  "Ferrari",
+                              "Russo", "Esposito", "Bianco", "Colombo",
+                              "Ricci", "Marino",   "Romano", "Greco",
+                              "Conti", "Costa",    "Gallo"};
+
+  strcpy(name, names[rand() % 20]);
+  strcat(name, " ");
+  strcat(name, surnames[rand() % 15]);
 }
 
 void generateAddress(char address[]) {
     // Non so perchè il formatter faccia in modo diverso per i due array
+
     const char *streets[30] = {"Via Roma",
                                "Corso Vittorio Emanuele",
                                "Via Milano",
@@ -62,7 +65,7 @@ void generateAddress(char address[]) {
                                "Corso Garibaldi",
                                "Via Trento",
                                "Via Trieste"};
-  
+
     const char *provinces[20] = {
         "Milano",  "Roma",    "Napoli",  "Torino", "Palermo",
         "Genova",  "Bologna", "Firenze", "Bari",   "Catania",
@@ -71,22 +74,26 @@ void generateAddress(char address[]) {
   
     strcpy(address, streets[rand() % 30]);
     int civicNumber = rand() % 120 + 1;
-    char numStr[5];
-    sprintf(numStr, "%d, ", civicNumber);
+    char numStr[7];
+    sprintf(numStr, " %d, ", civicNumber);
     strcat(address, numStr);
     strcat(address, provinces[rand() % 20]);
 }
 
 int main(int argc, char *argv[]) {
-    // Inizializza il generatore di numeri casuali con il tempo attuale
     srand(time(NULL)); 
 
-    int numEntries = 50; // Imposta un valore predefinito per il numero di voci
+    int numEntries = 50;
     if (argc == 2) {
-        numEntries = atoi(argv[1]); // Se viene passato un argomento da linea di comando, usa quello come numero di voci
+        numEntries = atoi(argv[1]); 
     }
 
-    dataEntry entries[numEntries];
+    dataEntry *entries = (dataEntry *)malloc(numEntries * sizeof(dataEntry));
+    if (entries == NULL) {
+        fprintf(stderr, "Errore di allocazione della memoria\n");
+        return 1;
+    }
+
     for (int i = 0; i < numEntries; i++) {
         generateName(entries[i].name);
         generateAddress(entries[i].address);
