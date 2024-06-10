@@ -1,6 +1,6 @@
 HEADERS = SocketUtilities.h DatabaseHandler.h CommonUtils.h ClientProcedures.h CommonDefines.h
 
-all:  server tui #clientTest
+all:  server tui clientTest
 
 server: server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o
 	gcc server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o -o server

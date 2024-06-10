@@ -5,3 +5,5 @@ clientTest
 tui
 commitNotes.md
 YellowPage.data
+.vscode/launch.json
+.vscode/tasks.json

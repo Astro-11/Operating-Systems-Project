@@ -311,9 +311,9 @@ void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entri
 
     char failureMessage[MSG_LENGHT];
     if (outcome == -1)
-        strcpy(failureMessage, "The provided record was not valid");
+        strcpy(failureMessage, "Invalid record");
     else if (outcome == -2) 
-        strcpy(failureMessage, "The provided record was already present in the database");
+        strcpy(failureMessage, "Record collision in db");
 
     sendMsg(clientSocket, failureMessage);
     printf("Outcome %d - failed to add record: \n%s\n\n", outcome, failureMessage);
