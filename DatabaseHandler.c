@@ -132,7 +132,8 @@ int check_name(char name[]) {
             if ( c != ' ') 
                 return 0; 
         } else
-            count++;
+            if(++count > 62)
+                return 0;
     
     return count;
 }
@@ -145,7 +146,8 @@ int check_address(char address[]) {
         if (c != ' ' && isspace(c)){
                 return 0; 
         } else{
-            count++;
+            if(++count > 62)
+                return 0;
         }
     return count;
 }
@@ -163,7 +165,8 @@ int check_phone_number(char phoneNumber[]) {
             //     c != '_' 
                 return 0; 
         } else{
-            count++;
+            if(++count > 64)
+                return 0;;
         }
     return count;
 }
