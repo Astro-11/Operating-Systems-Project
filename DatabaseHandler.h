@@ -4,7 +4,7 @@
 #ifndef DATABASE_HANDLER_H
 #define DATABASE_HANDLER_H
 
-void debug_populate_db();
+// void debug_populate_db();
 
 //FILE * open_db_read();
 
