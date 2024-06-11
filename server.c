@@ -504,7 +504,7 @@ void handle_sigint(int sig) {
     if (mainServerPid == getpid()) {
         printf("Sending SIGINT signal to user server group %d\n", (int)(userServersGroupPid));
         if (userServersGroupPid != 0) killpg(userServersGroupPid, SIGINT);
-        sleep(0.5);
+        sleep(1);
     }
     //If Admin Server save db first, then die
     else if (adminOnline == 1) {

@@ -23,10 +23,11 @@ int open_form_to_search(int clientSocket);
 int open_form_to_add_new_entry(int clientSocket);
 int open_form_to_delete_an_entry(int clientSocket);
 int open_form_to_edit_an_entry(int clientSocket);
+
 void build_form_window(WINDOW **w, FORM **f, char *title);
 void clean_form_window(WINDOW **w, FORM **f);
 
-void fillPadWithContacts(WINDOW *pad, dataEntry results[], int totalResults);
+void fill_pad_with_entries(WINDOW *pad, dataEntry results[], int totalResults);
 int show_entries_in_array(dataEntry results[], int totalResults);
 
 void display_form_message(WINDOW *win, const char *message, int color);
@@ -261,7 +262,7 @@ int open_form_to_search(int clientSocket) {
     return 0;
 }
 
-// Function to display a window with a form and save input to a file
+
 int open_form_to_add_new_entry(int clientSocket) {
     WINDOW *formWindow;
     FORM *myForm;
@@ -495,6 +496,7 @@ int open_form_to_edit_an_entry(int clientSocket){
 void build_form_window(WINDOW **w, FORM **f, char *title){
     
     curs_set(1); // Turns the cursor visibility on
+
     // Create a new window for the form
     // Calculate window dimensions and positions
     int height = 12;                   // Total height of the menu window (including border and title)
@@ -511,7 +513,7 @@ void build_form_window(WINDOW **w, FORM **f, char *title){
 
     // Create form fields
     FIELD **fields = malloc(4 * sizeof(FIELD*));
-    int gap = 3;
+    int gap = 3; // from the labels
     fields[0] = new_field(1, MAX_FIELD_LEN, 0, gap, 0, 0);
     fields[1] = new_field(1, MAX_FIELD_LEN, 1, gap, 0, 0);
     fields[2] = new_field(1, MAX_FIELD_LEN, 2, gap, 0, 0);
@@ -580,24 +582,15 @@ int show_entries_in_array(dataEntry results[], int totalResults){
     getmaxyx(stdscr, rows, cols);
 
     // Create a pad large enough to hold all the data entries
-    int pad_rows = 5*totalResults; // Adjust the number of rows as needed
-    int pad_cols = 64; // Adjust the number of columns as needed
+    int pad_rows = 5 * totalResults; 
+    int pad_cols = 64;               
     WINDOW *pad = newpad(pad_rows, pad_cols);
 
-    // Fill the pad with contact details (using the empty contacts array)
-    fillPadWithContacts(pad, results, totalResults);
+    fill_pad_with_entries(pad, results, totalResults);
 
     // Calculate the position to center the pad
     int pad_y = (rows - pad_rows) / 2;
     int pad_x = (cols - pad_cols) / 2;
-
-    // Draw a box around the text
-    int box_height = pad_rows + 2;
-    int box_width = pad_cols + 2;
-    int box_y = pad_y - 1;
-    int box_x = pad_x - 1;
-    WINDOW *box_win = newwin(box_height, box_width, box_y, box_x);
-    // wrefresh(box_win);
 
     // Display the pad in the center of the screen
     prefresh(pad, 0, 0, pad_y, pad_x, rows - 1, cols - 1);
@@ -638,14 +631,13 @@ int show_entries_in_array(dataEntry results[], int totalResults){
     // Cleanup
     clear();
     refresh();
-    delwin(box_win);
     delwin(pad);
     endwin();
 
     return 1;
 };
 
-void fillPadWithContacts(WINDOW *pad, dataEntry results[], int totalResults) {
+void fill_pad_with_entries(WINDOW *pad, dataEntry results[], int totalResults) {
     for (int i = 0; i < totalResults; i++) {
         wprintw(pad, " # %d\n", i);
         wprintw(pad, " Name: %s\n", results[i].name);
