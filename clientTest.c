@@ -57,7 +57,7 @@ int main(){
             printf("\n");
         #endif
 
-        dataEntry results[10];
+        dataEntry results[MAX_RESULTS];
         int count = search_record(clientSocket, testQuery, results);
         
         #if DEBUG
@@ -151,10 +151,10 @@ int main(){
         } break;
     case LOGOUT:
         logout(clientSocket, 1);
+        exit(EXIT_SUCCESS);
         break;
     default:
         printf("Invalid option selected, try again: \n");
-        
         break;
     }
     
@@ -167,5 +167,8 @@ int main(){
 
 void handle_sigint(int sig) {
     if (busy) logoutRequested = 1;
-    else logout(clientSocket, 1);
+    else {
+        logout(clientSocket, 1);
+        exit(EXIT_FAILURE);
+    }
 }
