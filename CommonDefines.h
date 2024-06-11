@@ -1,7 +1,7 @@
 #ifndef COMMON_DEFINES_H
 #define COMMON_DEFINES_H
 
-#define YELLOWPAGES_DB "YellowPage.data"
+#define YELLOWPAGES_DB "YellowPages.data"
 
 #define SERVER_IP "127.0.0.1"
 #define PORT 9890
@@ -21,9 +21,9 @@
 #define ACCESS_DENIED "ACCESS_DENIED"
 
 typedef struct {
-    char name[MSG_LENGHT];
-    char address[MSG_LENGHT];
-    char phoneNumber[MSG_LENGHT];
+    char name[MAX_FIELD_LENGHT];
+    char address[MAX_FIELD_LENGHT];
+    char phoneNumber[MAX_FIELD_LENGHT];
 } dataEntry;
 
 typedef enum {

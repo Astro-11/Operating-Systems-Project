@@ -5,8 +5,8 @@ all:  server tui clientTest generateDatabase
 server: server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o
 	gcc server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o -o server
 
-tui: tui.c SocketUtilities.o DatabaseHandler.o CommonUtils.o ClientProcedures.o 
-	gcc  tui.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o CommonUtils.o ClientProcedures.o -o tui
+YellowPagesTUI: YellowPagesTUI.c SocketUtilities.o DatabaseHandler.o CommonUtils.o ClientProcedures.o 
+	gcc  YellowPagesTUI.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o CommonUtils.o ClientProcedures.o -o YellowPagesTUI
 
 clientTest: clientTest.o SocketUtilities.o ClientProcedures.o CommonUtils.o
 	gcc clientTest.c SocketUtilities.o ClientProcedures.o CommonUtils.o -o clientTest

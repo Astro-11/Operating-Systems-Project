@@ -2,9 +2,9 @@
 *.o
 server
 clientTest
-tui
+YellowPagesTUI
 commitNotes.md
-YellowPage.data
 .vscode/launch.json
 .vscode/tasks.json
 generateDatabase
+YellowPages.data

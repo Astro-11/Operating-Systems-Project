@@ -8,6 +8,7 @@
 #include <signal.h>
 
 #include "ClientProcedures.h"
+#include "CommonDefines.h"
 
 #define MENU_CHOICES 6
 #define MAX_FIELD_LEN 45
@@ -199,7 +200,7 @@ int open_form_to_search(int clientSocket) {
     wrefresh(formWindow);
 
     int outcome=-1;
-    dataEntry results[128];
+    dataEntry results[MAX_RESULTS];
     int exit = 0;
     int ch;
     while (!exit && (ch = getch()) != KEY_F(1)) {
@@ -415,7 +416,7 @@ int open_form_to_edit_an_entry(int clientSocket){
 
     int exit = 0;
     int search = 1;
-    dataEntry results[128];
+    dataEntry results[MAX_RESULTS];
     int ch;
     while ( !exit &&  (ch = getch()) != KEY_F(1)) {
         switch (ch) {
