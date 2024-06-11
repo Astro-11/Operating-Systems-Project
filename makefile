@@ -1,18 +1,18 @@
 HEADERS = SocketUtilities.h DatabaseHandler.h CommonUtils.h ClientProcedures.h CommonDefines.h
 
-all:  server YellowPagesTUI clientTest generateDatabase
+all:  Server YellowPagesTUI ClientTest GenerateDatabase
 
-server: server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o
-	gcc server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o -o server
+Server: Server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o
+	gcc Server.o SocketUtilities.o DatabaseHandler.o CommonUtils.o -o Server
 
 YellowPagesTUI: YellowPagesTUI.c SocketUtilities.o DatabaseHandler.o CommonUtils.o ClientProcedures.o 
 	gcc  YellowPagesTUI.c -lform -lmenu -lncurses SocketUtilities.o DatabaseHandler.o CommonUtils.o ClientProcedures.o -o YellowPagesTUI
 
-clientTest: clientTest.o SocketUtilities.o ClientProcedures.o CommonUtils.o
-	gcc clientTest.c SocketUtilities.o ClientProcedures.o CommonUtils.o -o clientTest
+ClientTest: ClientTest.o SocketUtilities.o ClientProcedures.o CommonUtils.o
+	gcc ClientTest.c SocketUtilities.o ClientProcedures.o CommonUtils.o -o ClientTest
 
-generateDatabase: generateDatabase.o DatabaseHandler.o CommonUtils.o
-	gcc generateDatabase.c DatabaseHandler.o CommonUtils.o -o generateDatabase
+GenerateDatabase: GenerateDatabase.o DatabaseHandler.o CommonUtils.o
+	gcc GenerateDatabase.c DatabaseHandler.o CommonUtils.o -o GenerateDatabase
 
 # https://www.gnu.org/software/make/manual/html_node/Pattern-Examples.html
 # https://www.gnu.org/software/make/manual/html_node/Automatic-Variables.html
@@ -20,4 +20,4 @@ generateDatabase: generateDatabase.o DatabaseHandler.o CommonUtils.o
 	gcc -c $< -o $@
 
 clean:
-	rm *.o server YellowPagesTUI clientTest generateDatabase
+	rm *.o Server YellowPagesTUI ClientTest GenerateDatabase
