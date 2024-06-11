@@ -20,4 +20,4 @@ generateDatabase: generateDatabase.o DatabaseHandler.o CommonUtils.o
 	gcc -c $< -o $@
 
 clean:
-	rm *.o server tui clientTest generateDatabase
+	rm *.o server YellowPagesTUI clientTest generateDatabase
