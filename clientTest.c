@@ -30,7 +30,6 @@ int main(){
     char choiceStr[SIGNAL_LENGTH];
     fgets(choiceStr, SIGNAL_LENGTH, stdin);
     int choice;
-    //sscanf(choiceStr, "%d", &choice);
     choice = (int)strtol(choiceStr, 0, 10);
     busy = 1;
 

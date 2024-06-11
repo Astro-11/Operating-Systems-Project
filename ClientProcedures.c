@@ -92,6 +92,12 @@ int delete_record(int clientSocket, dataEntry entryToDelete, char errorMessage[M
     return outcome;
 }
 
+// Return: the outcome of the operation as an `int`  
+// outcome =  0 -> Successfull deletion
+// outcome = -1 -> No matching entries found
+// outcome = -2 -> More than one record already match the whole "signature" of the query, it should be exactly 1.
+// outcome = -3 -> Editing the record would create a duplicated entry.
+// Side-effect: If failure saves an error message to `errorMessage`
 int edit_record(int clientSocket, dataEntry entryToEdit, dataEntry editedEntry, char errorMessage[MSG_LENGHT]) {
     int choice = EDIT_RECORD;
     send_signal(clientSocket, &choice);

@@ -61,7 +61,6 @@ int main(){
     mainServerPid = getpid();
     int serverSocket = create_server_socket(PORT, handle_errno);
 
-    // debug_populate_db();
     update_runtime_database(runtimeDatabase, &runtimeEntriesCount);
     printf("RuntimeEntriesCount: %d\n", runtimeEntriesCount);
     
@@ -116,10 +115,6 @@ int main(){
             close(clientSocket);
         }
     }
-    
-    // NOTE S: We never reach here right?
-    // close(serverSocket); 
-    // return 0;
 }
 
 void admin_loop(int clientSocket) {
@@ -282,7 +277,7 @@ void search_record_procedure(int clientSocket, dataEntry entries[], int entriesC
 
 
 // Returns the number of matching records found
-// Saves as a side-effect the entries found in the parameter queryResults[]
+// Saves the entries found in the parameter queryResults[]
 int search_records(dataEntry entries[], int entriesCount, dataEntry query, dataEntry queryResults[]) {
     int resultsCount = 0;
 
@@ -325,11 +320,11 @@ void add_new_record_procedure(int clientSocket, dataEntry entries[], int * entri
 
 //Returns the new entriesCount if succesful, -1 if newDataEntry is invalid, -2 if newDataEntry is already present in the db
 int add_new_record(dataEntry entries[], int * entriesCount, dataEntry newDataEntry) {
-    //NOTE A: At the moment we are validating and sanitizing every entry both when adding it to the runtimeDb and the actual db. 
-    //        Should we do it only once?
     if (validate_entry(newDataEntry) < 0) 
         return -1;
+        
     sanitize_entry(&newDataEntry);
+
     if (search_record_position(entries, *entriesCount, newDataEntry) != -1) 
         return -2;
 
@@ -493,8 +488,6 @@ void update_runtime_database(dataEntry newRuntimeDatabase[], int *newRuntimeEntr
     if (runtimeDatabase != NULL)
         free(runtimeDatabase);
 
-    //NOTE A: for now we do not handle runtime overflow
-    //However, it might be worth looking into dynamic data structures for the runtime db
     int runtimeDatabaseSize = 256 > *newRuntimeEntriesCount ? 512 : (*newRuntimeEntriesCount)*2;
 
     runtimeDatabase = (dataEntry *)malloc(runtimeDatabaseSize * sizeof(dataEntry));;
@@ -505,12 +498,13 @@ void update_runtime_database(dataEntry newRuntimeDatabase[], int *newRuntimeEntr
 
 //For all servers
 void handle_sigint(int sig) {
-    printf("\n\nCaught signal %d (Ctrl+C). Cleaning up process %d...\n", sig, (int)(getpid()));
+    printf("\nCaught signal %d (Ctrl+C). Cleaning up process %d...\n", sig, (int)(getpid()));
     
     //If Main Server kill all User Servers first, then die
     if (mainServerPid == getpid()) {
         printf("Sending SIGINT signal to user server group %d\n", (int)(userServersGroupPid));
         if (userServersGroupPid != 0) killpg(userServersGroupPid, SIGINT);
+        sleep(0.5);
     }
     //If Admin Server save db first, then die
     else if (adminOnline == 1) {
